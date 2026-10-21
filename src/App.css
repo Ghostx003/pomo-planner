@@ -2590,47 +2590,8 @@
   background: radial-gradient(circle at center, rgba(30, 41, 59, 0.75) 0%, rgba(15, 23, 42, 0.98) 78%);
   border: 2px solid var(--border-medium);
   box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.6), 0 10px 28px rgba(0, 0, 0, 0.4);
-}
-
-.clock-dial-pin {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 12px;
-  height: 12px;
-  background: var(--color-primary-light);
-  border-radius: 50%;
-  transform: translate(-50%, -50%);
-  z-index: 10;
-  box-shadow: 0 0 10px var(--color-primary);
-}
-
-.clock-dial-hand {
-  position: absolute;
-  left: 130px;
-  top: 130px;
-  width: 2px;
-  height: 96px;
-  background: linear-gradient(to top, var(--color-primary-light), var(--color-primary));
-  transform-origin: top center;
-  pointer-events: none;
-  z-index: 2;
-  box-shadow: 0 0 8px rgba(99, 102, 241, 0.6);
-  margin-top: -96px;
-  margin-left: -1px;
-}
-
-.clock-dial-hand-head {
-  position: absolute;
-  top: -16px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: rgba(99, 102, 241, 0.25);
-  border: 1.5px solid var(--color-primary-light);
-  box-shadow: 0 0 12px var(--color-primary);
+  cursor: pointer;
+  user-select: none;
 }
 
 .clock-dial-digit {
@@ -2650,20 +2611,21 @@
   z-index: 5;
   transform: translate(-50%, -50%);
   transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+  user-select: none;
 }
 
 .clock-dial-digit:hover {
   background: var(--bg-pill-hover);
   color: var(--text-main);
-  transform: translate(-50%, -50%) scale(1.15);
+  transform: translate(-50%, -50%) scale(1.12);
 }
 
 .clock-dial-digit.selected {
-  background: var(--color-primary) !important;
   color: #ffffff !important;
-  border-color: var(--color-primary-light) !important;
-  box-shadow: 0 0 14px var(--color-primary-glow), 0 3px 8px rgba(0, 0, 0, 0.4);
-  transform: translate(-50%, -50%) scale(1.18);
+  font-weight: 800 !important;
+  font-size: 0.94rem !important;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+  transform: translate(-50%, -50%) scale(1.08);
 }
 
 /* Stepper Minute Adjustment */

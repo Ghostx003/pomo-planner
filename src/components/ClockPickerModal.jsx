@@ -80,11 +80,34 @@ export function ClockPickerModal({
   const hoursList = [12, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
   const minutesList = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55];
 
-  // Rotation angles for dial hand
-  const currentAngle =
+  // Mathematical angle & position for active clock hand in SVG:
+  // 12 o'clock is 0 rad, 3 o'clock is pi/2, 6 is pi, 9 is 3pi/2
+  const activeAngleRad =
     activeTab === 'hours'
-      ? ((selectedHours % 12) / 12) * 360
-      : (selectedMinutes / 60) * 360;
+      ? ((display12Hour % 12) / 12) * 2 * Math.PI
+      : (selectedMinutes / 60) * 2 * Math.PI;
+
+  const dialRadius = 96;
+  const activeX = Math.round(130 + dialRadius * Math.sin(activeAngleRad));
+  const activeY = Math.round(130 - dialRadius * Math.cos(activeAngleRad));
+
+  // Allow clicking anywhere on clock circle face to set hour or minute
+  const handleDialClick = (e) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const clickX = e.clientX - rect.left - 130;
+    const clickY = e.clientY - rect.top - 130;
+    let angle = Math.atan2(clickX, -clickY);
+    if (angle < 0) angle += 2 * Math.PI;
+
+    if (activeTab === 'hours') {
+      let hour = Math.round(angle / (Math.PI / 6)) % 12;
+      if (hour === 0) hour = 12;
+      setHour12(hour);
+    } else {
+      let min = Math.round((angle / (2 * Math.PI)) * 60) % 60;
+      setSelectedMinutes(min);
+    }
+  };
 
   const handleStart = () => {
     onStartNow(deadlineStr);
@@ -117,7 +140,7 @@ export function ClockPickerModal({
 
         {/* Body */}
         <div className="clock-modal-body">
-          {/* Digital Time Preview Card */}
+          {/* Digital Time Preview Box */}
           <div className="clock-digital-box">
             <div className="clock-digital-time">
               <button
@@ -196,25 +219,55 @@ export function ClockPickerModal({
 
           {/* Circular Clock Face */}
           <div className="clock-dial-wrapper">
-            <div className="clock-circle-face">
-              {/* Dial Center Pin */}
-              <div className="clock-dial-pin" />
-
-              {/* Dial Hand needle pointing to angle */}
-              <div
-                className="clock-dial-hand"
-                style={{ transform: `rotate(${currentAngle}deg)` }}
+            <div
+              className="clock-circle-face"
+              onClick={handleDialClick}
+              title="Click anywhere on dial to set time"
+            >
+              {/* SVG Layer for needle and highlighted circle */}
+              <svg
+                viewBox="0 0 260 260"
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  width: '100%',
+                  height: '100%',
+                  pointerEvents: 'none',
+                  zIndex: 2,
+                }}
               >
-                <div className="clock-dial-hand-head" />
-              </div>
+                {/* Needle from center (130, 130) to active target */}
+                <line
+                  x1="130"
+                  y1="130"
+                  x2={activeX}
+                  y2={activeY}
+                  stroke="#6366f1"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                />
+                {/* Circular indicator highlight right behind selected number */}
+                <circle
+                  cx={activeX}
+                  cy={activeY}
+                  r="19"
+                  fill="#6366f1"
+                />
+                {/* Center pivot point */}
+                <circle
+                  cx="130"
+                  cy="130"
+                  r="5.5"
+                  fill="#818cf8"
+                />
+              </svg>
 
-              {/* Dial Numbers */}
+              {/* Numbers on the dial */}
               {activeTab === 'hours'
                 ? hoursList.map((h, i) => {
                     const angleRad = (i * 30 * Math.PI) / 180;
-                    const radius = 96;
-                    const x = Math.round(130 + radius * Math.sin(angleRad));
-                    const y = Math.round(130 - radius * Math.cos(angleRad));
+                    const x = Math.round(130 + dialRadius * Math.sin(angleRad));
+                    const y = Math.round(130 - dialRadius * Math.cos(angleRad));
                     const isSelected = display12Hour === h;
 
                     return (
@@ -223,7 +276,10 @@ export function ClockPickerModal({
                         type="button"
                         className={`clock-dial-digit ${isSelected ? 'selected' : ''}`}
                         style={{ left: `${x}px`, top: `${y}px` }}
-                        onClick={() => setHour12(h)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setHour12(h);
+                        }}
                       >
                         {h}
                       </button>
@@ -231,9 +287,8 @@ export function ClockPickerModal({
                   })
                 : minutesList.map((m, i) => {
                     const angleRad = (i * 30 * Math.PI) / 180;
-                    const radius = 96;
-                    const x = Math.round(130 + radius * Math.sin(angleRad));
-                    const y = Math.round(130 - radius * Math.cos(angleRad));
+                    const x = Math.round(130 + dialRadius * Math.sin(angleRad));
+                    const y = Math.round(130 - dialRadius * Math.cos(angleRad));
                     const isSelected = selectedMinutes === m;
 
                     return (
@@ -242,7 +297,10 @@ export function ClockPickerModal({
                         type="button"
                         className={`clock-dial-digit ${isSelected ? 'selected' : ''}`}
                         style={{ left: `${x}px`, top: `${y}px` }}
-                        onClick={() => setSelectedMinutes(m)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedMinutes(m);
+                        }}
                       >
                         {pad(m)}
                       </button>
