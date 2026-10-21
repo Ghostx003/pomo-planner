@@ -151,7 +151,7 @@ export function TimelineView({
   const activeSessionIndex = schedule.findIndex((t) => t.status === 'pending');
 
   return (
-    <div className="timeline-card glass-card">
+    <div id="study-plan-schedule" className="timeline-card glass-card">
       {/* Header */}
       <div className="timeline-header-row">
         <div

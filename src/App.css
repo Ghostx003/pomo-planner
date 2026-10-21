@@ -2219,3 +2219,555 @@
     justify-content: space-between;
   }
 }
+
+/* ==========================================================================
+   Clock Picker & Start Now Interactive Styles
+   ========================================================================== */
+
+.deadline-trigger-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  flex-wrap: wrap;
+}
+
+.deadline-clock-trigger-btn {
+  flex: 1;
+  min-width: 220px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.85rem;
+  padding: 0.75rem 1.15rem;
+  background: var(--bg-input);
+  border: 1.5px solid var(--border-medium);
+  border-radius: var(--radius-lg);
+  color: var(--text-main);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
+}
+
+.deadline-clock-trigger-btn:hover {
+  border-color: var(--color-primary-light);
+  background: var(--bg-card-hover);
+  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.2);
+  transform: translateY(-1px);
+}
+
+.deadline-clock-trigger-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.clock-icon-pulse {
+  color: var(--color-primary-light);
+  transition: transform 0.2s ease;
+}
+
+.deadline-clock-trigger-btn:hover .clock-icon-pulse {
+  transform: rotate(30deg) scale(1.1);
+}
+
+.deadline-clock-time-val {
+  font-family: var(--font-mono);
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text-main);
+}
+
+.deadline-clock-trigger-badge {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.3rem 0.65rem;
+  border-radius: var(--radius-full);
+  background: rgba(99, 102, 241, 0.15);
+  color: var(--color-primary-light);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+}
+
+.start-now-inline-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.35rem;
+  border-radius: var(--radius-lg);
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: #ffffff;
+  font-size: 0.92rem;
+  font-weight: 700;
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  white-space: nowrap;
+}
+
+.start-now-inline-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.45);
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+}
+
+.start-now-inline-btn:active {
+  transform: translateY(0);
+}
+
+/* Clock Picker Modal */
+.clock-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(4, 7, 14, 0.78);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  animation: modalFadeIn 0.2s ease-out;
+}
+
+@keyframes modalFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.clock-modal-content {
+  width: 100%;
+  max-width: 420px;
+  background: var(--bg-card-solid);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-xl);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6), 0 0 30px rgba(99, 102, 241, 0.15);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  animation: modalSlideUp 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes modalSlideUp {
+  from {
+    transform: translateY(24px) scale(0.96);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+.clock-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.15rem 1.4rem;
+  border-bottom: 1px solid var(--border-subtle);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.clock-modal-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-main);
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0;
+}
+
+.clock-modal-subtitle {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  margin: 0.15rem 0 0 0;
+}
+
+.clock-modal-close-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-md);
+  background: var(--bg-pill);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.clock-modal-close-btn:hover {
+  background: var(--bg-pill-hover);
+  color: var(--text-main);
+}
+
+.clock-modal-body {
+  padding: 1.25rem 1.4rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+/* Digital segmented display */
+.clock-digital-display {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  background: var(--bg-input);
+  padding: 0.5rem 0.85rem;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-subtle);
+  width: 100%;
+}
+
+.clock-time-segment {
+  font-family: var(--font-mono);
+  font-size: 2rem;
+  font-weight: 800;
+  padding: 0.3rem 0.65rem;
+  border-radius: var(--radius-md);
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.clock-time-segment:hover {
+  color: var(--text-main);
+  background: var(--bg-pill-hover);
+}
+
+.clock-time-segment.active {
+  background: var(--color-primary-glow);
+  color: var(--color-primary-light);
+  border-color: rgba(99, 102, 241, 0.4);
+}
+
+.clock-colon {
+  font-family: var(--font-mono);
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.clock-ampm-switcher {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-left: 0.4rem;
+}
+
+.ampm-pill-btn {
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.25rem 0.6rem;
+  border-radius: var(--radius-sm);
+  background: var(--bg-pill);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.ampm-pill-btn.active {
+  background: var(--color-primary);
+  color: #ffffff;
+  border-color: var(--color-primary-light);
+}
+
+/* Stepper adjustments */
+.clock-stepper-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5rem;
+  width: 100%;
+}
+
+.stepper-unit {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.stepper-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-right: 0.2rem;
+}
+
+.stepper-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-pill);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.stepper-btn:hover {
+  background: var(--bg-pill-hover);
+  color: var(--text-main);
+  border-color: var(--border-medium);
+}
+
+/* Circular Clock Face */
+.clock-dial-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+}
+
+.clock-mode-tabs {
+  display: flex;
+  background: var(--bg-input);
+  padding: 0.2rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+  width: 100%;
+  max-width: 220px;
+}
+
+.clock-tab {
+  flex: 1;
+  text-align: center;
+  padding: 0.35rem 0.5rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.clock-tab.active {
+  background: var(--color-primary);
+  color: #ffffff;
+}
+
+.clock-face-circle {
+  position: relative;
+  width: 240px;
+  height: 240px;
+  border-radius: 50%;
+  background: radial-gradient(circle at center, rgba(30, 41, 59, 0.6) 0%, rgba(15, 23, 42, 0.95) 75%);
+  border: 2px solid var(--border-medium);
+  box-shadow: inset 0 0 25px rgba(0, 0, 0, 0.5), 0 8px 24px rgba(0, 0, 0, 0.35);
+  margin: 0.5rem 0;
+}
+
+.clock-center-dot {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 10px;
+  height: 10px;
+  background: var(--color-primary-light);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 10;
+  box-shadow: 0 0 8px var(--color-primary);
+}
+
+.clock-hand-line {
+  position: absolute;
+  left: 50%;
+  bottom: 50%;
+  width: 2px;
+  background: linear-gradient(to top, var(--color-primary), var(--color-primary-light));
+  transform-origin: bottom center;
+  pointer-events: none;
+  z-index: 2;
+  box-shadow: 0 0 6px rgba(99, 102, 241, 0.6);
+}
+
+.dial-digit-btn {
+  position: absolute;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.84rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 5;
+  transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+  transform: translate(-50%, -50%);
+}
+
+.dial-digit-btn:hover {
+  background: var(--bg-pill-hover);
+  color: var(--text-main);
+  transform: translate(-50%, -50%) scale(1.15);
+}
+
+.dial-digit-btn.active {
+  background: var(--color-primary);
+  color: #ffffff;
+  box-shadow: 0 0 12px var(--color-primary-glow), 0 2px 6px rgba(0, 0, 0, 0.3);
+  transform: translate(-50%, -50%) scale(1.15);
+}
+
+/* Quick presets */
+.clock-quick-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  justify-content: center;
+  width: 100%;
+}
+
+.clock-preset-chip {
+  font-size: 0.74rem;
+  font-weight: 600;
+  padding: 0.3rem 0.65rem;
+  border-radius: var(--radius-full);
+  background: var(--bg-pill);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.clock-preset-chip:hover {
+  background: var(--bg-pill-hover);
+  color: var(--text-main);
+  border-color: var(--border-medium);
+}
+
+/* Summary info bar */
+.clock-time-summary-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  width: 100%;
+  padding: 0.65rem 0.85rem;
+  background: var(--bg-input);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+}
+
+.clock-summary-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+}
+
+.clock-summary-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.clock-summary-val {
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+/* Modal Footer */
+.clock-modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding: 1rem 1.4rem;
+  border-top: 1px solid var(--border-subtle);
+  background: rgba(255, 255, 255, 0.015);
+}
+
+.clock-cancel-btn {
+  padding: 0.65rem 1.15rem;
+  font-size: 0.86rem;
+  font-weight: 600;
+  border-radius: var(--radius-md);
+  background: var(--bg-pill);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.clock-cancel-btn:hover {
+  background: var(--bg-pill-hover);
+  color: var(--text-main);
+}
+
+.clock-start-now-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.65rem 1.35rem;
+  font-size: 0.88rem;
+  font-weight: 700;
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  color: #ffffff;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.clock-start-now-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(16, 185, 129, 0.5);
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+}
+
+.clock-start-now-btn:active {
+  transform: translateY(0);
+}
+
+@media (max-width: 480px) {
+  .deadline-trigger-wrapper {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .deadline-clock-trigger-btn {
+    width: 100%;
+  }
+  .start-now-inline-btn {
+    width: 100%;
+  }
+  .clock-modal-content {
+    border-radius: var(--radius-lg);
+  }
+  .clock-face-circle {
+    width: 210px;
+    height: 210px;
+  }
+}

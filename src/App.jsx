@@ -207,6 +207,33 @@ export default function App() {
     setOriginalBaselinePlan(initialPlan);
   };
 
+  // Start Now: anchor plan to current system time, generate/refresh Pomodoro schedule, and scroll to it
+  const handleStartNow = (targetDeadlineStr) => {
+    hasUserEditedRef.current = false;
+    const now = new Date();
+    setCurrentTime(now);
+    const chosenDeadline = targetDeadlineStr || deadlineStr;
+    if (targetDeadlineStr && targetDeadlineStr !== deadlineStr) {
+      setDeadlineStr(targetDeadlineStr);
+    }
+    const targetDate = getDeadlineToDate(chosenDeadline, now);
+    const freshPlan = calculateStudyPlan({
+      currentTime: now,
+      deadlineDate: targetDate,
+      focusMinutes,
+      breakMinutes,
+    });
+    setSchedule(freshPlan.timeline);
+    setOriginalBaselinePlan(freshPlan);
+
+    setTimeout(() => {
+      const scheduleEl = document.getElementById('study-plan-schedule');
+      if (scheduleEl) {
+        scheduleEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 60);
+  };
+
   // 8. Derived Interactive Schedule Statistics & Study Slip
   const scheduleStats = useMemo(() => {
     return computeInteractiveScheduleStats({
@@ -261,6 +288,7 @@ export default function App() {
               is24Hour={is24Hour}
               remainingSeconds={initialPlan.remainingSeconds}
               isCrossMidnight={initialPlan.isCrossMidnight}
+              onStartNow={handleStartNow}
             />
 
             {/* Focus & Break Duration Controls */}
