@@ -513,7 +513,7 @@ export function DurationControls({
                         </div>
                         {/* Quick Count Pills */}
                         <div className="phase-chips-row">
-                          {[1, 2, 3, 4, 6].map((num) => (
+                          {[1, 2, 3, 4, 5, 6, 7].map((num) => (
                             <button
                               key={num}
                               type="button"
