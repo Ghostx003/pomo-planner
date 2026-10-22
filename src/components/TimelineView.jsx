@@ -266,6 +266,12 @@ export function TimelineView({
                           {item.title}
                         </span>
 
+                        {item.phaseNumber && (
+                          <span className="badge-phase-tag-sm" title={`Phase ${item.phaseNumber}`}>
+                            Phase {item.phaseNumber}
+                          </span>
+                        )}
+
                         {isCurrent && !isCompleted && (
                           <span className="badge badge-current">
                             <span className="pulse-dot" />

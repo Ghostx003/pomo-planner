@@ -68,7 +68,7 @@ export default function App() {
     }
   }, [deadlineStr]);
 
-  // 3. Focus & Break Duration
+  // 3. Focus & Break Duration & Multi-Phase Divided Timing
   const [focusMinutes, setFocusMinutes] = useState(() => {
     const saved = localStorage.getItem('pomoplan_focus');
     return saved ? parseInt(saved, 10) || 25 : 25;
@@ -79,14 +79,54 @@ export default function App() {
     return saved !== null ? parseInt(saved, 10) || 5 : 5;
   });
 
+  // Timing Mode: 'uniform' (single duration) | 'divided' (multi-phase)
+  const [timingMode, setTimingMode] = useState(() => {
+    return localStorage.getItem('pomoplan_timing_mode') || 'uniform';
+  });
+
+  // Configured Study Phases for divided mode
+  const [phases, setPhases] = useState(() => {
+    try {
+      const saved = localStorage.getItem('pomoplan_phases');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      }
+    } catch {
+      // Ignore
+    }
+    return [
+      {
+        id: 'phase-1',
+        phaseNumber: 1,
+        name: 'Phase 1',
+        sessionsCount: 4,
+        focusMinutes: 25,
+        breakMinutes: 5,
+      },
+      {
+        id: 'phase-2',
+        phaseNumber: 2,
+        name: 'Phase 2',
+        sessionsCount: 2,
+        focusMinutes: 35,
+        breakMinutes: 5,
+      },
+    ];
+  });
+
   useEffect(() => {
     try {
       localStorage.setItem('pomoplan_focus', String(focusMinutes));
       localStorage.setItem('pomoplan_break', String(breakMinutes));
+      localStorage.setItem('pomoplan_timing_mode', timingMode);
+      localStorage.setItem('pomoplan_phases', JSON.stringify(phases));
     } catch {
       // Ignore storage errors
     }
-  }, [focusMinutes, breakMinutes]);
+  }, [focusMinutes, breakMinutes, timingMode, phases]);
 
   // 4. Preferences: 12/24 hour, Theme, Sound
   const [is24Hour, setIs24Hour] = useState(() => {
@@ -140,8 +180,10 @@ export default function App() {
       deadlineDate,
       focusMinutes,
       breakMinutes,
+      timingMode,
+      phases,
     });
-  }, [currentTime, deadlineDate, focusMinutes, breakMinutes]);
+  }, [currentTime, deadlineDate, focusMinutes, breakMinutes, timingMode, phases]);
 
   // Baseline reference to preserve original plan for Study Slip calculation
   const [originalBaselinePlan, setOriginalBaselinePlan] = useState(initialPlan);
@@ -150,7 +192,7 @@ export default function App() {
   const [schedule, setSchedule] = useState(() => initialPlan.timeline);
   const hasUserEditedRef = useRef(false);
 
-  // Sync schedule if global deadline or focus/break durations change and user hasn't made custom edits yet
+  // Sync schedule if global deadline or focus/break durations or phases change and user hasn't made custom edits yet
   useEffect(() => {
     if (!hasUserEditedRef.current) {
       setSchedule(initialPlan.timeline);
@@ -207,6 +249,17 @@ export default function App() {
     setOriginalBaselinePlan(initialPlan);
   };
 
+  // Synchronize target finish deadline to exact schedule total duration
+  const handleSyncDeadlineToSchedule = (totalDurationMinutes) => {
+    hasUserEditedRef.current = false;
+    const now = new Date();
+    setCurrentTime(now);
+    const targetDate = new Date(now.getTime() + totalDurationMinutes * 60 * 1000);
+    const h = String(targetDate.getHours()).padStart(2, '0');
+    const m = String(targetDate.getMinutes()).padStart(2, '0');
+    setDeadlineStr(`${h}:${m}`);
+  };
+
   // Start Now: anchor plan to current system time, generate/refresh Pomodoro schedule, and scroll to it
   const handleStartNow = (targetDeadlineStr) => {
     hasUserEditedRef.current = false;
@@ -222,6 +275,8 @@ export default function App() {
       deadlineDate: targetDate,
       focusMinutes,
       breakMinutes,
+      timingMode,
+      phases,
     });
     setSchedule(freshPlan.timeline);
     setOriginalBaselinePlan(freshPlan);
@@ -291,7 +346,7 @@ export default function App() {
               onStartNow={handleStartNow}
             />
 
-            {/* Focus & Break Duration Controls */}
+            {/* Focus & Break Duration Controls & Divided Multi-Phase Scheduler */}
             <DurationControls
               focusMinutes={focusMinutes}
               setFocusMinutes={(newVal) => {
@@ -303,6 +358,18 @@ export default function App() {
                 hasUserEditedRef.current = false;
                 setBreakMinutes(newVal);
               }}
+              timingMode={timingMode}
+              setTimingMode={(newMode) => {
+                hasUserEditedRef.current = false;
+                setTimingMode(newMode);
+              }}
+              phases={phases}
+              setPhases={(newPhases) => {
+                hasUserEditedRef.current = false;
+                setPhases(newPhases);
+              }}
+              currentTime={currentTime}
+              onSyncDeadlineToSchedule={handleSyncDeadlineToSchedule}
             />
 
             {/* Live Study Calculations Statistics Grid with Study Slip */}
@@ -348,16 +415,20 @@ export default function App() {
           </main>
         )}
 
-        {/* SCREEN 2: DAILY STUDY GOAL MODE */}
-        {activeMode === 'daily_goal' && (
-          <main style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
-            <DailyStudyGoal
-              globalFocusMinutes={focusMinutes}
-              globalBreakMinutes={breakMinutes}
-              is24Hour={is24Hour}
-            />
-          </main>
-        )}
+          {/* SCREEN 2: DAILY STUDY GOAL MODE */}
+          {activeMode === 'daily_goal' && (
+            <main style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
+              <DailyStudyGoal
+                globalFocusMinutes={focusMinutes}
+                globalBreakMinutes={breakMinutes}
+                is24Hour={is24Hour}
+                timingMode={timingMode}
+                setTimingMode={setTimingMode}
+                phases={phases}
+                setPhases={setPhases}
+              />
+            </main>
+          )}
 
         {/* Footer */}
         <footer className="app-footer">

@@ -28,12 +28,15 @@ export function getDeadlineToDate(deadlineStr, referenceDate = new Date()) {
 
 /**
  * Calculates core Pomodoro schedule metrics
+ * Supports both uniform timing and multi-phase divided timing
  */
 export function calculateStudyPlan({
   currentTime,
   deadlineDate,
   focusMinutes,
   breakMinutes,
+  timingMode = 'uniform',
+  phases = [],
 }) {
   const nowMs = currentTime.getTime();
   const deadlineMs = deadlineDate ? deadlineDate.getTime() : nowMs;
@@ -41,6 +44,133 @@ export function calculateStudyPlan({
   const remainingSeconds = Math.floor(remainingMs / 1000);
   const remainingMinutes = remainingSeconds / 60;
 
+  // Handle Divided / Multi-Phase Timing Mode
+  if (timingMode === 'divided' && Array.isArray(phases) && phases.length > 0) {
+    const validPhases = phases.filter(
+      (p) => (parseInt(p.sessionsCount, 10) || 0) > 0 && (parseInt(p.focusMinutes, 10) || 0) > 0
+    );
+
+    const activePhases = validPhases.length > 0
+      ? validPhases
+      : [
+          {
+            id: 'phase-1',
+            phaseNumber: 1,
+            name: 'Phase 1',
+            sessionsCount: 4,
+            focusMinutes: 25,
+            breakMinutes: 5,
+          },
+        ];
+
+    const timeline = [];
+    let currentSlotTime = new Date(nowMs);
+    let focusCounter = 0;
+    let breakCounter = 0;
+
+    const totalSessions = activePhases.reduce(
+      (sum, p) => sum + (parseInt(p.sessionsCount, 10) || 1),
+      0
+    );
+
+    activePhases.forEach((p, phaseIdx) => {
+      const sCount = Math.max(1, parseInt(p.sessionsCount, 10) || 1);
+      const fMins = Math.max(1, parseInt(p.focusMinutes, 10) || 25);
+      const bMins = Math.max(0, parseInt(p.breakMinutes, 10) || 0);
+      const pNum = p.phaseNumber || phaseIdx + 1;
+      const pName = p.name || `Phase ${pNum}`;
+
+      for (let s = 1; s <= sCount; s++) {
+        focusCounter++;
+        const focusStartTime = new Date(currentSlotTime);
+        const focusEndTime = new Date(focusStartTime.getTime() + fMins * 60 * 1000);
+
+        timeline.push({
+          id: `focus-${focusCounter}`,
+          type: 'focus',
+          sessionNumber: focusCounter,
+          phaseNumber: pNum,
+          phaseName: pName,
+          title: `Pomodoro #${focusCounter}`,
+          durationMinutes: fMins,
+          startTime: focusStartTime,
+          endTime: focusEndTime,
+          originalStartTime: new Date(focusStartTime),
+          originalEndTime: new Date(focusEndTime),
+          originalDurationMinutes: fMins,
+          status: 'pending',
+          actualCompletedAt: null,
+          isManuallyAdjusted: false,
+        });
+
+        currentSlotTime = focusEndTime;
+
+        // Add break if not the last session of the whole schedule and break > 0
+        const isOverallLast = focusCounter === totalSessions;
+        if (!isOverallLast && bMins > 0) {
+          breakCounter++;
+          const breakStartTime = new Date(currentSlotTime);
+          const breakEndTime = new Date(breakStartTime.getTime() + bMins * 60 * 1000);
+
+          timeline.push({
+            id: `break-${breakCounter}`,
+            type: 'break',
+            sessionNumber: breakCounter,
+            phaseNumber: pNum,
+            phaseName: pName,
+            title: `Break #${breakCounter}`,
+            durationMinutes: bMins,
+            startTime: breakStartTime,
+            endTime: breakEndTime,
+            originalStartTime: new Date(breakStartTime),
+            originalEndTime: new Date(breakEndTime),
+            originalDurationMinutes: bMins,
+            status: 'pending',
+            actualCompletedAt: null,
+            isManuallyAdjusted: false,
+          });
+
+          currentSlotTime = breakEndTime;
+        }
+      }
+    });
+
+    const totalFocusMinutes = timeline
+      .filter((t) => t.type === 'focus')
+      .reduce((sum, t) => sum + t.durationMinutes, 0);
+    const totalBreakMinutes = timeline
+      .filter((t) => t.type === 'break')
+      .reduce((sum, t) => sum + t.durationMinutes, 0);
+    const totalPlannedMinutes = totalFocusMinutes + totalBreakMinutes;
+    const completionDate = new Date(nowMs + totalPlannedMinutes * 60 * 1000);
+    const bufferMinutes = Math.max(0, Math.floor(remainingMinutes - totalPlannedMinutes));
+
+    let efficiency = 0;
+    if (totalPlannedMinutes > 0) {
+      efficiency = Math.min(100, Math.round((totalFocusMinutes / totalPlannedMinutes) * 100));
+    }
+
+    return {
+      remainingMs,
+      remainingSeconds,
+      remainingMinutes,
+      pomodorosPossible: focusCounter,
+      focusMinutes: activePhases[0].focusMinutes,
+      breakMinutes: activePhases[0].breakMinutes,
+      totalFocusMinutes,
+      totalBreakMinutes,
+      totalPlannedMinutes,
+      bufferMinutes,
+      completionDate,
+      efficiency,
+      timeline,
+      isCrossMidnight: completionDate ? completionDate.getDate() !== currentTime.getDate() : false,
+      isDividedMode: true,
+      phases: activePhases,
+    };
+  }
+
+  // Uniform fallback mode
   const focus = Math.max(1, parseInt(focusMinutes, 10) || 25);
   const breakTime = Math.max(0, parseInt(breakMinutes, 10) || 0);
 
@@ -132,6 +262,7 @@ export function calculateStudyPlan({
     efficiency,
     timeline,
     isCrossMidnight: deadlineDate ? deadlineDate.getDate() !== currentTime.getDate() : false,
+    isDividedMode: false,
   };
 }
 
@@ -420,15 +551,91 @@ export function computeInteractiveScheduleStats({
   };
 }
 
+/**
+ * Calculates phase-by-phase and aggregated summary for multi-phase Pomodoro schedule
+ */
+export function calculatePhasesSummary(phases = []) {
+  if (!Array.isArray(phases) || phases.length === 0) {
+    return {
+      phaseRows: [],
+      totalSessionsCount: 0,
+      totalStudyMinutes: 0,
+      totalBreakMinutes: 0,
+      totalDurationMinutes: 0,
+    };
+  }
+
+  let totalSessionsCount = 0;
+  let totalStudyMinutes = 0;
+  let totalBreakMinutes = 0;
+
+  const phaseRows = phases.map((phase, idx) => {
+    const pNum = phase.phaseNumber || idx + 1;
+    const count = Math.max(1, parseInt(phase.sessionsCount, 10) || 1);
+    const focus = Math.max(1, parseInt(phase.focusMinutes, 10) || 25);
+    const rest = Math.max(0, parseInt(phase.breakMinutes, 10) || 0);
+
+    const studyMins = count * focus;
+    const breakMins = count * rest;
+    const totalMins = studyMins + breakMins;
+
+    totalSessionsCount += count;
+    totalStudyMinutes += studyMins;
+    totalBreakMinutes += breakMins;
+
+    return {
+      phaseNumber: pNum,
+      name: phase.name || `Phase ${pNum}`,
+      sessionsCount: count,
+      focusMinutes: focus,
+      breakMinutes: rest,
+      studyMinutes: studyMins,
+      breakMinutesTotal: breakMins,
+      totalMinutes: totalMins,
+    };
+  });
+
+  return {
+    phaseRows,
+    totalSessionsCount,
+    totalStudyMinutes,
+    totalBreakMinutes,
+    totalDurationMinutes: totalStudyMinutes + totalBreakMinutes,
+  };
+}
+
 /* ==========================================================================
    DAILY STUDY GOAL CALCULATIONS & STACK ENGINE
    ========================================================================== */
 
 /**
  * Calculates metrics for a daily focused study target in hours
- * Formula: Required Pomodoros = Math.ceil((goalHours * 60) / focusDuration)
+ * Supports both uniform target and multi-phase divided timing
  */
-export function calculateDailyGoalMetrics(goalHours, focusMinutes = 25, breakMinutes = 5) {
+export function calculateDailyGoalMetrics(
+  goalHours,
+  focusMinutes = 25,
+  breakMinutes = 5,
+  timingMode = 'uniform',
+  phases = []
+) {
+  if (timingMode === 'divided' && Array.isArray(phases) && phases.length > 0) {
+    const summary = calculatePhasesSummary(phases);
+    const hours = Number((summary.totalStudyMinutes / 60).toFixed(1));
+    return {
+      goalHours: hours,
+      targetFocusMinutes: summary.totalStudyMinutes,
+      focusMinutes: phases[0].focusMinutes || 25,
+      breakMinutes: phases[0].breakMinutes || 5,
+      requiredPomodoros: summary.totalSessionsCount,
+      totalFocusMinutes: summary.totalStudyMinutes,
+      totalBreakMinutes: summary.totalBreakMinutes,
+      totalDurationMinutes: summary.totalDurationMinutes,
+      isDividedMode: true,
+      phasesSummary: summary,
+    };
+  }
+
   const hours = Math.max(0.25, parseFloat(goalHours) || 4);
   const focus = Math.max(1, parseInt(focusMinutes, 10) || 25);
   const breakDuration = Math.max(0, parseInt(breakMinutes, 10) || 5);
@@ -449,6 +656,7 @@ export function calculateDailyGoalMetrics(goalHours, focusMinutes = 25, breakMin
     totalFocusMinutes,
     totalBreakMinutes,
     totalDurationMinutes,
+    isDividedMode: false,
   };
 }
 
@@ -456,9 +664,64 @@ export function calculateDailyGoalMetrics(goalHours, focusMinutes = 25, breakMin
  * Generates an untimed Pomodoro & Break checklist stack
  * Entries intentionally contain NO scheduled clock times / timestamps.
  */
-export function generateUntimedGoalStack(requiredPomodoros, focusMinutes = 25, breakMinutes = 5) {
+export function generateUntimedGoalStack(
+  requiredPomodoros,
+  focusMinutes = 25,
+  breakMinutes = 5,
+  timingMode = 'uniform',
+  phases = []
+) {
   const stack = [];
   let breakCount = 0;
+  let focusCount = 0;
+
+  if (timingMode === 'divided' && Array.isArray(phases) && phases.length > 0) {
+    const totalSessions = phases.reduce(
+      (sum, p) => sum + (parseInt(p.sessionsCount, 10) || 1),
+      0
+    );
+
+    phases.forEach((p, pIdx) => {
+      const sCount = Math.max(1, parseInt(p.sessionsCount, 10) || 1);
+      const fMins = Math.max(1, parseInt(p.focusMinutes, 10) || 25);
+      const bMins = Math.max(0, parseInt(p.breakMinutes, 10) || 0);
+      const pNum = p.phaseNumber || pIdx + 1;
+      const pName = p.name || `Phase ${pNum}`;
+
+      for (let s = 1; s <= sCount; s++) {
+        focusCount++;
+        stack.push({
+          id: `goal-focus-${focusCount}-${Date.now()}-${s}`,
+          type: 'focus',
+          sessionNumber: focusCount,
+          phaseNumber: pNum,
+          phaseName: pName,
+          title: `Pomodoro #${focusCount}`,
+          durationMinutes: fMins,
+          status: 'pending',
+          completedAt: null,
+        });
+
+        const isLast = focusCount === totalSessions;
+        if (!isLast && bMins > 0) {
+          breakCount++;
+          stack.push({
+            id: `goal-break-${breakCount}-${Date.now()}-${s}`,
+            type: 'break',
+            sessionNumber: breakCount,
+            phaseNumber: pNum,
+            phaseName: pName,
+            title: `Break #${breakCount}`,
+            durationMinutes: bMins,
+            status: 'pending',
+            completedAt: null,
+          });
+        }
+      }
+    });
+
+    return stack;
+  }
 
   for (let i = 1; i <= requiredPomodoros; i++) {
     stack.push({
@@ -468,6 +731,7 @@ export function generateUntimedGoalStack(requiredPomodoros, focusMinutes = 25, b
       title: `Pomodoro #${i}`,
       durationMinutes: focusMinutes,
       status: 'pending',
+      completedAt: null,
     });
 
     if (i < requiredPomodoros && breakMinutes > 0) {
@@ -479,6 +743,7 @@ export function generateUntimedGoalStack(requiredPomodoros, focusMinutes = 25, b
         title: `Break #${breakCount}`,
         durationMinutes: breakMinutes,
         status: 'pending',
+        completedAt: null,
       });
     }
   }
@@ -544,6 +809,16 @@ export function formatDuration(totalMinutes) {
   if (hours === 0) return `${remainderMins}m`;
   if (remainderMins === 0) return `${hours}h`;
   return `${hours}h ${remainderMins}m`;
+}
+
+export function formatDurationWords(totalMinutes) {
+  const mins = Math.max(0, Math.round(totalMinutes));
+  const hours = Math.floor(mins / 60);
+  const remainderMins = mins % 60;
+
+  if (hours === 0) return `${remainderMins} min`;
+  if (remainderMins === 0) return `${hours} ${hours === 1 ? 'hour' : 'hours'}`;
+  return `${hours} ${hours === 1 ? 'hour' : 'hours'} ${remainderMins} min`;
 }
 
 export function formatSlipMinutes(slipMinutes) {

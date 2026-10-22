@@ -22,6 +22,7 @@ import {
   formatClockTime,
   formatFriendlyDate,
 } from '../utils/pomodoroCalc';
+import { PomodoroScheduleTable } from './PomodoroScheduleTable';
 
 const STORAGE_KEY = 'pomoplan_daily_goal_state';
 
@@ -29,6 +30,8 @@ export function DailyStudyGoal({
   globalFocusMinutes,
   globalBreakMinutes,
   is24Hour,
+  timingMode = 'uniform',
+  phases = [],
 }) {
   // 1. Goal Settings
   const [goalHours, setGoalHours] = useState(() => {
@@ -107,7 +110,13 @@ export function DailyStudyGoal({
   }, [goalHours, focusMinutes, breakMinutes, isChecklistGenerated, pendingStack, completedHistory]);
 
   // Derived Goal Metrics
-  const metrics = calculateDailyGoalMetrics(goalHours, focusMinutes, breakMinutes);
+  const metrics = calculateDailyGoalMetrics(
+    goalHours,
+    focusMinutes,
+    breakMinutes,
+    timingMode,
+    phases
+  );
 
   // Derived Progress
   const progress = computeDailyGoalProgress(
@@ -124,7 +133,9 @@ export function DailyStudyGoal({
     const stack = generateUntimedGoalStack(
       metrics.requiredPomodoros,
       metrics.focusMinutes,
-      metrics.breakMinutes
+      metrics.breakMinutes,
+      timingMode,
+      phases
     );
     setPendingStack(stack);
     setIsChecklistGenerated(true);
@@ -384,6 +395,11 @@ export function DailyStudyGoal({
         )}
       </div>
 
+      {/* Divided Multi-Phase Schedule Breakdown in Goal Mode */}
+      {timingMode === 'divided' && phases.length > 0 && (
+        <PomodoroScheduleTable phases={phases} />
+      )}
+
       {/* 4. Live Progress Bar Section */}
       {isChecklistGenerated && (
         <div className="glass-card goal-progress-card animate-fade-in">
@@ -495,7 +511,12 @@ export function DailyStudyGoal({
                     )}
                   </div>
                   <div>
-                    <h4 className="hero-title">{activeItem.title}</h4>
+                    <div className="flex items-center gap-2">
+                      <h4 className="hero-title">{activeItem.title}</h4>
+                      {activeItem.phaseNumber && (
+                        <span className="badge-phase-tag">Phase {activeItem.phaseNumber}</span>
+                      )}
+                    </div>
                     <span className="hero-duration font-mono">
                       {activeItem.durationMinutes} min {activeItem.type === 'focus' ? 'deep focus study' : 'rest & stretch'}
                     </span>
@@ -559,6 +580,9 @@ export function DailyStudyGoal({
                         )}
                       </span>
                       <span className="upcoming-name font-medium">{item.title}</span>
+                      {item.phaseNumber && (
+                        <span className="badge-phase-tag-sm">P{item.phaseNumber}</span>
+                      )}
                     </div>
 
                     <span className="upcoming-duration font-mono text-xs text-slate-400">
@@ -617,6 +641,9 @@ export function DailyStudyGoal({
                     <div className="history-info">
                       <div className="history-title-row">
                         <span className="history-title font-semibold">{item.title}</span>
+                        {item.phaseNumber && (
+                          <span className="badge-phase-tag-sm">Phase {item.phaseNumber}</span>
+                        )}
                         <span
                           className={`badge text-[10px] ${
                             isSkipped ? 'badge-skipped' : 'badge-focus'
