@@ -13,7 +13,7 @@ import {
   Sliders,
 } from 'lucide-react';
 import { PomodoroScheduleTable } from './PomodoroScheduleTable';
-import { formatDuration } from '../utils/pomodoroCalc';
+import { formatDuration, triggerHaptic } from '../utils/pomodoroCalc';
 
 export function DurationControls({
   focusMinutes,
@@ -164,14 +164,20 @@ export function DurationControls({
           <button
             type="button"
             className={`timing-mode-tab ${!isDivided ? 'timing-tab-active' : ''}`}
-            onClick={() => setTimingMode('uniform')}
+            onClick={() => {
+              triggerHaptic('light');
+              setTimingMode('uniform');
+            }}
           >
             <span>Single Duration</span>
           </button>
           <button
             type="button"
             className={`timing-mode-tab ${isDivided ? 'timing-tab-active timing-tab-highlight' : ''}`}
-            onClick={() => setTimingMode('divided')}
+            onClick={() => {
+              triggerHaptic('light');
+              setTimingMode('divided');
+            }}
           >
             <Layers className="w-3.5 h-3.5" />
             <span>Divide Further</span>

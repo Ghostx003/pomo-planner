@@ -969,3 +969,25 @@ export function playChimeSound() {
     console.warn('Audio chime note could not be played:', err);
   }
 }
+
+/**
+ * Native mobile vibration / haptic feedback helper
+ * Provides subtle tactile feedback on mobile devices for tap interactions
+ */
+export function triggerHaptic(type = 'light') {
+  try {
+    if (typeof window !== 'undefined' && 'navigator' in window && typeof navigator.vibrate === 'function') {
+      if (type === 'light') {
+        navigator.vibrate(10);
+      } else if (type === 'medium') {
+        navigator.vibrate(22);
+      } else if (type === 'success') {
+        navigator.vibrate([15, 30, 20]);
+      } else if (type === 'warning') {
+        navigator.vibrate([25, 40, 25]);
+      }
+    }
+  } catch {
+    // Ignore unsupported or restricted vibration calls
+  }
+}

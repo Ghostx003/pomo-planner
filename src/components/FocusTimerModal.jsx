@@ -12,7 +12,7 @@ import {
   Volume2,
   VolumeX,
 } from 'lucide-react';
-import { formatCountdown, playChimeSound } from '../utils/pomodoroCalc';
+import { formatCountdown, playChimeSound, triggerHaptic } from '../utils/pomodoroCalc';
 
 export function FocusTimerModal({
   isOpen,
@@ -34,6 +34,7 @@ export function FocusTimerModal({
   // Handle switching sessions explicitly
   const selectSession = (index) => {
     if (index >= 0 && index < timeline.length) {
+      triggerHaptic('light');
       setCurrentIndex(index);
       setSecondsRemaining(timeline[index].durationMinutes * 60);
       setIsRunning(false);
@@ -196,6 +197,7 @@ export function FocusTimerModal({
               type="button"
               className="timer-btn timer-btn-secondary"
               onClick={() => {
+                triggerHaptic('light');
                 setSecondsRemaining(totalItemSeconds);
                 setIsRunning(false);
               }}
@@ -208,7 +210,10 @@ export function FocusTimerModal({
             <button
               type="button"
               className={`timer-btn timer-btn-primary ${isFocus ? 'btn-focus-primary' : 'btn-break-primary'}`}
-              onClick={() => setIsRunning(!isRunning)}
+              onClick={() => {
+                triggerHaptic('medium');
+                setIsRunning(!isRunning);
+              }}
               title={isRunning ? 'Pause Timer' : 'Start Timer'}
             >
               {isRunning ? <Pause className="w-6 h-6 fill-current" /> : <Play className="w-6 h-6 fill-current ml-0.5" />}
@@ -219,7 +224,10 @@ export function FocusTimerModal({
               <button
                 type="button"
                 className="timer-btn timer-btn-secondary"
-                onClick={() => selectSession(currentIndex + 1)}
+                onClick={() => {
+                  triggerHaptic('light');
+                  selectSession(currentIndex + 1);
+                }}
                 title="Skip to next session/break"
               >
                 <span>Skip</span>

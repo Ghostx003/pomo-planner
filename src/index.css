@@ -78,6 +78,7 @@
   box-sizing: border-box;
   margin: 0;
   padding: 0;
+  -webkit-tap-highlight-color: transparent;
 }
 
 body {
@@ -85,16 +86,19 @@ body {
   background-color: var(--bg-app);
   color: var(--text-main);
   min-height: 100vh;
+  min-height: 100dvh;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
   transition: background-color 0.3s ease, color 0.3s ease;
+  touch-action: manipulation;
 }
 
 /* Background Ambient Glow */
 .app-container {
   min-height: 100vh;
+  min-height: 100dvh;
   position: relative;
   background-image: var(--bg-gradient);
   background-repeat: no-repeat;
@@ -116,6 +120,24 @@ body {
 .font-mono {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
+}
+
+/* Visibility helpers */
+.mobile-only {
+  display: none !important;
+}
+
+.desktop-only {
+  display: flex !important;
+}
+
+@media (max-width: 768px) {
+  .mobile-only {
+    display: flex !important;
+  }
+  .desktop-only {
+    display: none !important;
+  }
 }
 
 /* Buttons and interactive elements */
@@ -230,11 +252,22 @@ input[type=number] {
 /* Responsive adjustments */
 @media (max-width: 768px) {
   .content-wrapper {
-    padding: 1rem 1rem 2.5rem;
-    gap: 1.25rem;
+    padding: 0.85rem 0.85rem calc(5.75rem + env(safe-area-inset-bottom, 16px));
+    gap: 1.15rem;
   }
   .glass-card {
-    padding: 1.15rem;
+    padding: 1.15rem 1rem;
     border-radius: var(--radius-lg);
   }
+  /* Prevent iOS Safari auto-zoom on input focus */
+  input[type="text"],
+  input[type="number"],
+  input[type="time"] {
+    font-size: 16px !important;
+  }
+}
+
+/* Touch active scale feedback for native feel */
+button:active:not(:disabled) {
+  transform: scale(0.97);
 }

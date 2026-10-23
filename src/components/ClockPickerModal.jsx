@@ -12,6 +12,7 @@ import {
 import {
   getDeadlineToDate,
   formatDuration,
+  triggerHaptic,
 } from '../utils/pomodoroCalc';
 
 export function ClockPickerModal({
@@ -19,7 +20,7 @@ export function ClockPickerModal({
   onClose,
   initialDeadlineStr,
   currentTime,
-  is24Hour,
+  is24Hour: _is24Hour,
   onStartNow,
 }) {
   const [selectedHours, setSelectedHours] = useState(21);
@@ -50,6 +51,7 @@ export function ClockPickerModal({
   const isCrossMidnight = targetDate ? targetDate.getDate() !== currentTime.getDate() : false;
 
   const setHour12 = (h12) => {
+    triggerHaptic('light');
     let new24H = h12 % 12;
     if (selectedPeriod === 'PM') {
       new24H += 12;
@@ -59,6 +61,7 @@ export function ClockPickerModal({
   };
 
   const setPeriod = (period) => {
+    triggerHaptic('light');
     setSelectedPeriod(period);
     let h12 = selectedHours % 12;
     if (period === 'PM') {
@@ -69,6 +72,7 @@ export function ClockPickerModal({
   };
 
   const addFromNow = (mins) => {
+    triggerHaptic('light');
     const d = new Date(currentTime.getTime() + mins * 60 * 1000);
     const h = d.getHours();
     const m = d.getMinutes();
@@ -81,7 +85,6 @@ export function ClockPickerModal({
   const minutesList = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55];
 
   // Mathematical angle & position for active clock hand in SVG:
-  // 12 o'clock is 0 rad, 3 o'clock is pi/2, 6 is pi, 9 is 3pi/2
   const activeAngleRad =
     activeTab === 'hours'
       ? ((display12Hour % 12) / 12) * 2 * Math.PI
@@ -91,11 +94,13 @@ export function ClockPickerModal({
   const activeX = Math.round(130 + dialRadius * Math.sin(activeAngleRad));
   const activeY = Math.round(130 - dialRadius * Math.cos(activeAngleRad));
 
-  // Allow clicking anywhere on clock circle face to set hour or minute
-  const handleDialClick = (e) => {
+  // Pointer event handler for touch & mouse drag on dial
+  const handleDialPointer = (e) => {
     const rect = e.currentTarget.getBoundingClientRect();
-    const clickX = e.clientX - rect.left - 130;
-    const clickY = e.clientY - rect.top - 130;
+    const centerX = rect.width / 2;
+    const centerY = rect.height / 2;
+    const clickX = e.clientX - rect.left - centerX;
+    const clickY = e.clientY - rect.top - centerY;
     let angle = Math.atan2(clickX, -clickY);
     if (angle < 0) angle += 2 * Math.PI;
 
@@ -106,10 +111,27 @@ export function ClockPickerModal({
     } else {
       let min = Math.round((angle / (2 * Math.PI)) * 60) % 60;
       setSelectedMinutes(min);
+      triggerHaptic('light');
+    }
+  };
+
+  const handlePointerDown = (e) => {
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {
+      // Ignore
+    }
+    handleDialPointer(e);
+  };
+
+  const handlePointerMove = (e) => {
+    if (e.buttons === 1 || e.pressure > 0) {
+      handleDialPointer(e);
     }
   };
 
   const handleStart = () => {
+    triggerHaptic('medium');
     onStartNow(deadlineStr);
     onClose();
   };
@@ -146,7 +168,10 @@ export function ClockPickerModal({
               <button
                 type="button"
                 className={`clock-segment-btn ${activeTab === 'hours' ? 'active' : ''}`}
-                onClick={() => setActiveTab('hours')}
+                onClick={() => {
+                  triggerHaptic('light');
+                  setActiveTab('hours');
+                }}
                 title="Click to edit hour"
               >
                 {pad(display12Hour)}
@@ -155,7 +180,10 @@ export function ClockPickerModal({
               <button
                 type="button"
                 className={`clock-segment-btn ${activeTab === 'minutes' ? 'active' : ''}`}
-                onClick={() => setActiveTab('minutes')}
+                onClick={() => {
+                  triggerHaptic('light');
+                  setActiveTab('minutes');
+                }}
                 title="Click to edit minute"
               >
                 {pad(selectedMinutes)}
@@ -204,14 +232,20 @@ export function ClockPickerModal({
             <button
               type="button"
               className={`clock-tab-btn ${activeTab === 'hours' ? 'active' : ''}`}
-              onClick={() => setActiveTab('hours')}
+              onClick={() => {
+                triggerHaptic('light');
+                setActiveTab('hours');
+              }}
             >
               Select Hours
             </button>
             <button
               type="button"
               className={`clock-tab-btn ${activeTab === 'minutes' ? 'active' : ''}`}
-              onClick={() => setActiveTab('minutes')}
+              onClick={() => {
+                triggerHaptic('light');
+                setActiveTab('minutes');
+              }}
             >
               Select Minutes
             </button>
@@ -221,8 +255,10 @@ export function ClockPickerModal({
           <div className="clock-dial-wrapper">
             <div
               className="clock-circle-face"
-              onClick={handleDialClick}
-              title="Click anywhere on dial to set time"
+              onPointerDown={handlePointerDown}
+              onPointerMove={handlePointerMove}
+              title="Click or drag on dial to set time"
+              style={{ touchAction: 'none' }}
             >
               {/* SVG Layer for needle and highlighted circle */}
               <svg
@@ -300,6 +336,7 @@ export function ClockPickerModal({
                         onClick={(e) => {
                           e.stopPropagation();
                           setSelectedMinutes(m);
+                          triggerHaptic('light');
                         }}
                       >
                         {pad(m)}
@@ -314,7 +351,10 @@ export function ClockPickerModal({
             <button
               type="button"
               className="clock-stepper-btn"
-              onClick={() => setSelectedMinutes((prev) => (prev - 1 + 60) % 60)}
+              onClick={() => {
+                triggerHaptic('light');
+                setSelectedMinutes((prev) => (prev - 1 + 60) % 60);
+              }}
               title="Minus 1 minute"
             >
               <Minus className="w-4 h-4" />
@@ -325,7 +365,10 @@ export function ClockPickerModal({
             <button
               type="button"
               className="clock-stepper-btn"
-              onClick={() => setSelectedMinutes((prev) => (prev + 1) % 60)}
+              onClick={() => {
+                triggerHaptic('light');
+                setSelectedMinutes((prev) => (prev + 1) % 60);
+              }}
               title="Plus 1 minute"
             >
               <Plus className="w-4 h-4" />
@@ -336,21 +379,22 @@ export function ClockPickerModal({
           <div className="clock-presets-section">
             <span className="clock-presets-label">Quick extensions from now:</span>
             <div className="clock-chips-grid">
-              <button type="button" className="clock-chip-btn" onClick={() => addFromNow(30)}>
-                +30m
-              </button>
-              <button type="button" className="clock-chip-btn" onClick={() => addFromNow(60)}>
-                +1h
-              </button>
-              <button type="button" className="clock-chip-btn" onClick={() => addFromNow(120)}>
-                +2h
-              </button>
-              <button type="button" className="clock-chip-btn" onClick={() => addFromNow(180)}>
-                +3h
-              </button>
-              <button type="button" className="clock-chip-btn" onClick={() => addFromNow(240)}>
-                +4h
-              </button>
+              {[
+                { label: '+30m', mins: 30 },
+                { label: '+1h', mins: 60 },
+                { label: '+2h', mins: 120 },
+                { label: '+3h', mins: 180 },
+                { label: '+4h', mins: 240 },
+              ].map((c) => (
+                <button
+                  key={c.mins}
+                  type="button"
+                  className="clock-chip-btn"
+                  onClick={() => addFromNow(c.mins)}
+                >
+                  {c.label}
+                </button>
+              ))}
             </div>
           </div>
         </div>

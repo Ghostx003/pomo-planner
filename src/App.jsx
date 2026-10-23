@@ -9,6 +9,7 @@ import { EfficiencyBar } from './components/EfficiencyBar';
 import { TimelineView } from './components/TimelineView';
 import { FocusTimerModal } from './components/FocusTimerModal';
 import { DailyStudyGoal } from './components/DailyStudyGoal';
+import { MobileBottomNav } from './components/MobileBottomNav';
 import {
   getDeadlineToDate,
   calculateStudyPlan,
@@ -16,6 +17,7 @@ import {
   computeInteractiveScheduleStats,
   rescheduleAfterCompletion,
   undoCompletionInSchedule,
+  triggerHaptic,
 } from './utils/pomodoroCalc';
 
 // Helper for initial default deadline (e.g. 2.5 hours ahead rounded to clean 15 min)
@@ -147,6 +149,10 @@ export default function App() {
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
+    const metaThemeColor = document.getElementById('theme-color-meta');
+    if (metaThemeColor) {
+      metaThemeColor.setAttribute('content', theme === 'dark' ? '#090d16' : '#f8fafc');
+    }
     try {
       localStorage.setItem('pomoplan_theme', theme);
     } catch {
@@ -204,6 +210,7 @@ export default function App() {
   // Automatically anchors next pending entry to actual completion time and cascades downstream!
   const handleToggleComplete = (itemId) => {
     hasUserEditedRef.current = true;
+    triggerHaptic('success');
     setSchedule((prev) => {
       const targetIndex = prev.findIndex((item) => item.id === itemId);
       if (targetIndex === -1) return prev;
@@ -263,6 +270,7 @@ export default function App() {
   // Start Now: anchor plan to current system time, generate/refresh Pomodoro schedule, and scroll to it
   const handleStartNow = (targetDeadlineStr) => {
     hasUserEditedRef.current = false;
+    triggerHaptic('medium');
     const now = new Date();
     setCurrentTime(now);
     const chosenDeadline = targetDeadlineStr || deadlineStr;
@@ -456,6 +464,14 @@ export default function App() {
         timeline={schedule}
         soundEnabled={soundEnabled}
         setSoundEnabled={setSoundEnabled}
+      />
+
+      {/* Mobile Bottom Navigation Bar */}
+      <MobileBottomNav
+        activeMode={activeMode}
+        setActiveMode={setActiveMode}
+        onOpenFocusMode={() => setIsFocusModalOpen(true)}
+        hasSessions={schedule.length > 0}
       />
     </div>
   );

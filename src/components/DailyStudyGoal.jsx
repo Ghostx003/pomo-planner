@@ -21,6 +21,7 @@ import {
   formatDuration,
   formatClockTime,
   formatFriendlyDate,
+  triggerHaptic,
 } from '../utils/pomodoroCalc';
 import { PomodoroScheduleTable } from './PomodoroScheduleTable';
 
@@ -130,6 +131,7 @@ export function DailyStudyGoal({
 
   // Generate Checklist handler
   const handleGenerateChecklist = () => {
+    triggerHaptic('medium');
     const stack = generateUntimedGoalStack(
       metrics.requiredPomodoros,
       metrics.focusMinutes,
@@ -144,6 +146,7 @@ export function DailyStudyGoal({
   // Complete the Active Item
   const handleCompleteActiveItem = (item) => {
     if (!item) return;
+    triggerHaptic('success');
     const now = new Date();
     const completedRecord = {
       ...item,
@@ -161,6 +164,7 @@ export function DailyStudyGoal({
   // Skip a Break
   const handleSkipBreak = (breakItem) => {
     if (!breakItem) return;
+    triggerHaptic('light');
     const now = new Date();
     const skippedRecord = {
       ...breakItem,
