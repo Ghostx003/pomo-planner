@@ -103,11 +103,11 @@ export function StudySummaryTracker({ schedule = [], is24Hour = false }) {
           <div>
             <div className="heading-with-badge">
               <h3 className="study-summary-heading">Study & Break Summary</h3>
-              <span className="badge badge-focus text-[11px]">
-                {formatHours(completedFocusMinutes)} Studied
+              <span className="badge badge-focus text-[11px] summary-header-badge">
+                {formatDuration(completedFocusMinutes)} studied
               </span>
-              <span className="badge badge-break text-[11px]">
-                {completedBreaksCount} {completedBreaksCount === 1 ? 'Break' : 'Breaks'} Taken
+              <span className="badge badge-break text-[11px] summary-header-badge">
+                {completedBreaksCount} {completedBreaksCount === 1 ? 'break' : 'breaks'} taken
               </span>
             </div>
             <p className="study-summary-sub">
@@ -154,11 +154,13 @@ export function StudySummaryTracker({ schedule = [], is24Hour = false }) {
             </div>
           </div>
           <div className="summary-card-body">
-            <div className="summary-card-val-text font-mono text-emerald-400">
-              {formatHoursAndMinutes(completedFocusMinutes)}
+            <div className="summary-card-metric-val">
+              <span className="val-highlight text-emerald-400">
+                {formatDuration(completedFocusMinutes)}
+              </span>
             </div>
-            <div className="summary-card-sub-info font-mono text-xs text-slate-300">
-              {formatDuration(completedFocusMinutes)} total focus time logged
+            <div className="summary-card-sub-info text-xs text-slate-300">
+              {completedFocusCount} of {focusCount} Pomodoros completed
             </div>
             <div className="summary-card-progress-wrap mt-2.5">
               <div className="summary-progress-bar-bg">
@@ -168,8 +170,8 @@ export function StudySummaryTracker({ schedule = [], is24Hour = false }) {
                 />
               </div>
               <div className="summary-card-footer-text">
-                <span>{completedFocusCount} of {focusCount} Pomodoros done</span>
-                <span className="font-mono">{studyProgressPercent}%</span>
+                <span>Progress to goal</span>
+                <span className="font-mono font-semibold">{studyProgressPercent}%</span>
               </div>
             </div>
           </div>
@@ -184,16 +186,16 @@ export function StudySummaryTracker({ schedule = [], is24Hour = false }) {
             </div>
           </div>
           <div className="summary-card-body">
-            <div className="summary-card-val-row">
-              <span className="summary-card-big-val font-mono text-amber-400">
+            <div className="summary-card-metric-val">
+              <span className="val-highlight text-amber-400 font-mono">
                 {completedBreaksCount}
               </span>
-              <span className="summary-card-unit">
-                {completedBreaksCount === 1 ? 'break' : 'breaks'} taken
+              <span className="val-sub">
+                {completedBreaksCount === 1 ? 'break taken' : 'breaks taken'}
               </span>
             </div>
-            <div className="summary-card-sub-info font-mono text-xs text-slate-300">
-              {formatHoursAndMinutes(completedBreakMinutes)} rest logged
+            <div className="summary-card-sub-info text-xs text-slate-300">
+              {formatDuration(completedBreakMinutes)} total rest logged
             </div>
             <div className="summary-card-footer-info mt-2.5">
               <div className="break-status-pills">
@@ -213,7 +215,7 @@ export function StudySummaryTracker({ schedule = [], is24Hour = false }) {
           </div>
         </div>
 
-        {/* Card 3: Remaining Study Hours */}
+        {/* Card 3: Remaining Study */}
         <div className="summary-metric-card summary-card-remaining glass-card">
           <div className="summary-card-header">
             <span className="summary-card-label">Remaining Study</span>
@@ -222,23 +224,25 @@ export function StudySummaryTracker({ schedule = [], is24Hour = false }) {
             </div>
           </div>
           <div className="summary-card-body">
-            <div className="summary-card-val-text font-mono text-sky-400">
-              {formatHoursAndMinutes(remainingFocusMinutes)}
+            <div className="summary-card-metric-val">
+              <span className="val-highlight text-sky-400">
+                {formatDuration(remainingFocusMinutes)}
+              </span>
             </div>
-            <div className="summary-card-sub-info font-mono text-xs text-slate-300">
-              {formatDuration(remainingFocusMinutes)} focus remaining
+            <div className="summary-card-sub-info text-xs text-slate-300">
+              {remainingFocusCount === 0
+                ? 'All study blocks completed!'
+                : `${remainingFocusCount} study session${remainingFocusCount === 1 ? '' : 's'} remaining`}
             </div>
             <div className="summary-card-footer-info mt-2.5">
-              <span className="text-xs text-slate-400">
-                {remainingFocusCount === 0
-                  ? 'All planned sessions finished'
-                  : `${remainingFocusCount} study session${remainingFocusCount === 1 ? '' : 's'} remaining`}
+              <span className="summary-footer-badge text-sky-300/80">
+                Paced toward target deadline
               </span>
             </div>
           </div>
         </div>
 
-        {/* Card 4: Total Plan Target & Ratio */}
+        {/* Card 4: Total Plan Target */}
         <div className="summary-metric-card summary-card-total glass-card">
           <div className="summary-card-header">
             <span className="summary-card-label">Total Plan Target</span>
@@ -247,15 +251,17 @@ export function StudySummaryTracker({ schedule = [], is24Hour = false }) {
             </div>
           </div>
           <div className="summary-card-body">
-            <div className="summary-card-val-text font-mono text-indigo-300">
-              {formatHoursAndMinutes(totalFocusMinutes)}
+            <div className="summary-card-metric-val">
+              <span className="val-highlight text-indigo-300">
+                {formatDuration(totalFocusMinutes)}
+              </span>
             </div>
-            <div className="summary-card-sub-info font-mono text-xs text-slate-300">
-              {focusCount} Pomodoros • {formatHoursAndMinutes(totalPlannedMinutes)} total schedule
+            <div className="summary-card-sub-info text-xs text-slate-300">
+              {focusCount} Pomodoro sessions target
             </div>
             <div className="summary-card-footer-info mt-2.5">
-              <span className="text-xs text-indigo-300/80">
-                Study/Break ratio: {formatDuration(totalFocusMinutes)} focus / {formatDuration(totalBreakMinutes)} rest
+              <span className="summary-footer-badge text-indigo-300/80">
+                Total with rest: {formatDuration(totalPlannedMinutes)}
               </span>
             </div>
           </div>
