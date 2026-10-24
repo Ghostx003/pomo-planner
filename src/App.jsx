@@ -7,6 +7,7 @@ import { DurationControls } from './components/DurationControls';
 import { StatsGrid } from './components/StatsGrid';
 import { EfficiencyBar } from './components/EfficiencyBar';
 import { TimelineView } from './components/TimelineView';
+import { StudySummaryTracker } from './components/StudySummaryTracker';
 import { FocusTimerModal } from './components/FocusTimerModal';
 import { DailyStudyGoal } from './components/DailyStudyGoal';
 import { MobileBottomNav } from './components/MobileBottomNav';
@@ -33,6 +34,45 @@ function getInitialDeadline() {
   const h = String(d.getHours()).padStart(2, '0');
   const m = String(d.getMinutes()).padStart(2, '0');
   return `${h}:${m}`;
+}
+
+// Deserialization helpers for schedule and baseline plan persistence
+function deserializeSchedule(rawItems) {
+  if (!Array.isArray(rawItems) || rawItems.length === 0) return null;
+  try {
+    const list = rawItems.map((item) => ({
+      ...item,
+      startTime: new Date(item.startTime),
+      endTime: new Date(item.endTime),
+      originalStartTime: item.originalStartTime ? new Date(item.originalStartTime) : new Date(item.startTime),
+      originalEndTime: item.originalEndTime ? new Date(item.originalEndTime) : new Date(item.endTime),
+      actualCompletedAt: item.actualCompletedAt ? new Date(item.actualCompletedAt) : null,
+    }));
+    const hasInvalid = list.some((it) => isNaN(it.startTime.getTime()) || isNaN(it.endTime.getTime()));
+    if (hasInvalid) return null;
+    return list;
+  } catch {
+    return null;
+  }
+}
+
+function deserializeBaselinePlan(rawPlan) {
+  if (!rawPlan || typeof rawPlan !== 'object') return null;
+  try {
+    return {
+      ...rawPlan,
+      completionDate: rawPlan.completionDate ? new Date(rawPlan.completionDate) : null,
+      timeline: Array.isArray(rawPlan.timeline) ? deserializeSchedule(rawPlan.timeline) : [],
+    };
+  } catch {
+    return null;
+  }
+}
+
+function isScheduleRecent(items) {
+  if (!items || items.length === 0) return false;
+  const lastItem = items[items.length - 1];
+  return lastItem.endTime.getTime() > Date.now() - 24 * 3600 * 1000;
 }
 
 export default function App() {
@@ -176,27 +216,92 @@ export default function App() {
   const [isFocusModalOpen, setIsFocusModalOpen] = useState(false);
 
   // 6. Original Baseline Plan Calculation
+  const [planAnchorTime, setPlanAnchorTime] = useState(() => {
+    try {
+      const saved = localStorage.getItem('pomoplan_anchor_time');
+      if (saved) {
+        const d = new Date(saved);
+        if (!isNaN(d.getTime())) return d;
+      }
+    } catch {
+      // Ignore
+    }
+    return new Date();
+  });
+
   const deadlineDate = useMemo(() => {
-    return getDeadlineToDate(deadlineStr, currentTime);
-  }, [deadlineStr, currentTime]);
+    return getDeadlineToDate(deadlineStr, planAnchorTime);
+  }, [deadlineStr, planAnchorTime]);
 
   const initialPlan = useMemo(() => {
     return calculateStudyPlan({
-      currentTime,
+      currentTime: planAnchorTime,
       deadlineDate,
       focusMinutes,
       breakMinutes,
       timingMode,
       phases,
     });
-  }, [currentTime, deadlineDate, focusMinutes, breakMinutes, timingMode, phases]);
+  }, [planAnchorTime, deadlineDate, focusMinutes, breakMinutes, timingMode, phases]);
 
   // Baseline reference to preserve original plan for Study Slip calculation
-  const [originalBaselinePlan, setOriginalBaselinePlan] = useState(initialPlan);
+  const [originalBaselinePlan, setOriginalBaselinePlan] = useState(() => {
+    try {
+      const saved = localStorage.getItem('pomoplan_original_baseline_plan');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        const deserialized = deserializeBaselinePlan(parsed);
+        if (deserialized) return deserialized;
+      }
+    } catch {
+      // Ignore
+    }
+    return initialPlan;
+  });
 
-  // 7. Interactive Schedule State
-  const [schedule, setSchedule] = useState(() => initialPlan.timeline);
-  const hasUserEditedRef = useRef(false);
+  // 7. Interactive Schedule State (Persistent)
+  const hasUserEditedRef = useRef(
+    localStorage.getItem('pomoplan_schedule_has_edits') === 'true'
+  );
+
+  const [schedule, setSchedule] = useState(() => {
+    try {
+      const saved = localStorage.getItem('pomoplan_interactive_schedule');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        const deserialized = deserializeSchedule(parsed);
+        if (deserialized && deserialized.length > 0 && isScheduleRecent(deserialized)) {
+          return deserialized;
+        }
+      }
+    } catch {
+      // Ignore
+    }
+    return initialPlan.timeline;
+  });
+
+  // Save schedule & edit flag whenever schedule changes
+  useEffect(() => {
+    try {
+      if (schedule && schedule.length > 0) {
+        localStorage.setItem('pomoplan_interactive_schedule', JSON.stringify(schedule));
+        localStorage.setItem('pomoplan_schedule_has_edits', String(hasUserEditedRef.current));
+      }
+    } catch {
+      // Ignore storage errors
+    }
+  }, [schedule]);
+
+  // Save originalBaselinePlan whenever it changes
+  useEffect(() => {
+    try {
+      if (originalBaselinePlan) {
+        localStorage.setItem('pomoplan_original_baseline_plan', JSON.stringify(originalBaselinePlan));
+      }
+    } catch {
+      // Ignore storage errors
+    }
+  }, [originalBaselinePlan]);
 
   // Sync schedule if global deadline or focus/break durations or phases change and user hasn't made custom edits yet
   useEffect(() => {
@@ -210,6 +315,7 @@ export default function App() {
   // Automatically anchors next pending entry to actual completion time and cascades downstream!
   const handleToggleComplete = (itemId) => {
     hasUserEditedRef.current = true;
+    localStorage.setItem('pomoplan_schedule_has_edits', 'true');
     triggerHaptic('success');
     setSchedule((prev) => {
       const targetIndex = prev.findIndex((item) => item.id === itemId);
@@ -232,6 +338,7 @@ export default function App() {
   // Handle skipping a break
   const handleToggleSkip = (itemId) => {
     hasUserEditedRef.current = true;
+    localStorage.setItem('pomoplan_schedule_has_edits', 'true');
     setSchedule((prev) =>
       prev.map((item) => {
         if (item.id === itemId) {
@@ -246,21 +353,38 @@ export default function App() {
   // Handle editing a start time or end time and auto-propagating
   const handleUpdateTime = (index, field, newTimeDate) => {
     hasUserEditedRef.current = true;
+    localStorage.setItem('pomoplan_schedule_has_edits', 'true');
     setSchedule((prev) => propagateScheduleUpdates(prev, index, field, newTimeDate));
   };
 
   // Reset to original plan
   const handleResetSchedule = () => {
     hasUserEditedRef.current = false;
-    setSchedule(initialPlan.timeline);
-    setOriginalBaselinePlan(initialPlan);
+    localStorage.setItem('pomoplan_schedule_has_edits', 'false');
+    const now = new Date();
+    setPlanAnchorTime(now);
+    localStorage.setItem('pomoplan_anchor_time', now.toISOString());
+    const targetDate = getDeadlineToDate(deadlineStr, now);
+    const freshPlan = calculateStudyPlan({
+      currentTime: now,
+      deadlineDate: targetDate,
+      focusMinutes,
+      breakMinutes,
+      timingMode,
+      phases,
+    });
+    setSchedule(freshPlan.timeline);
+    setOriginalBaselinePlan(freshPlan);
   };
 
   // Synchronize target finish deadline to exact schedule total duration
   const handleSyncDeadlineToSchedule = (totalDurationMinutes) => {
     hasUserEditedRef.current = false;
+    localStorage.setItem('pomoplan_schedule_has_edits', 'false');
     const now = new Date();
     setCurrentTime(now);
+    setPlanAnchorTime(now);
+    localStorage.setItem('pomoplan_anchor_time', now.toISOString());
     const targetDate = new Date(now.getTime() + totalDurationMinutes * 60 * 1000);
     const h = String(targetDate.getHours()).padStart(2, '0');
     const m = String(targetDate.getMinutes()).padStart(2, '0');
@@ -270,9 +394,12 @@ export default function App() {
   // Start Now: anchor plan to current system time, generate/refresh Pomodoro schedule, and scroll to it
   const handleStartNow = (targetDeadlineStr) => {
     hasUserEditedRef.current = false;
+    localStorage.setItem('pomoplan_schedule_has_edits', 'false');
     triggerHaptic('medium');
     const now = new Date();
     setCurrentTime(now);
+    setPlanAnchorTime(now);
+    localStorage.setItem('pomoplan_anchor_time', now.toISOString());
     const chosenDeadline = targetDeadlineStr || deadlineStr;
     if (targetDeadlineStr && targetDeadlineStr !== deadlineStr) {
       setDeadlineStr(targetDeadlineStr);
@@ -344,6 +471,10 @@ export default function App() {
               deadlineStr={deadlineStr}
               setDeadlineStr={(newVal) => {
                 hasUserEditedRef.current = false;
+                localStorage.setItem('pomoplan_schedule_has_edits', 'false');
+                const now = new Date();
+                setPlanAnchorTime(now);
+                localStorage.setItem('pomoplan_anchor_time', now.toISOString());
                 setDeadlineStr(newVal);
               }}
               deadlineDate={deadlineDate}
@@ -359,21 +490,37 @@ export default function App() {
               focusMinutes={focusMinutes}
               setFocusMinutes={(newVal) => {
                 hasUserEditedRef.current = false;
+                localStorage.setItem('pomoplan_schedule_has_edits', 'false');
+                const now = new Date();
+                setPlanAnchorTime(now);
+                localStorage.setItem('pomoplan_anchor_time', now.toISOString());
                 setFocusMinutes(newVal);
               }}
               breakMinutes={breakMinutes}
               setBreakMinutes={(newVal) => {
                 hasUserEditedRef.current = false;
+                localStorage.setItem('pomoplan_schedule_has_edits', 'false');
+                const now = new Date();
+                setPlanAnchorTime(now);
+                localStorage.setItem('pomoplan_anchor_time', now.toISOString());
                 setBreakMinutes(newVal);
               }}
               timingMode={timingMode}
               setTimingMode={(newMode) => {
                 hasUserEditedRef.current = false;
+                localStorage.setItem('pomoplan_schedule_has_edits', 'false');
+                const now = new Date();
+                setPlanAnchorTime(now);
+                localStorage.setItem('pomoplan_anchor_time', now.toISOString());
                 setTimingMode(newMode);
               }}
               phases={phases}
               setPhases={(newPhases) => {
                 hasUserEditedRef.current = false;
+                localStorage.setItem('pomoplan_schedule_has_edits', 'false');
+                const now = new Date();
+                setPlanAnchorTime(now);
+                localStorage.setItem('pomoplan_anchor_time', now.toISOString());
                 setPhases(newPhases);
               }}
               currentTime={currentTime}
@@ -419,6 +566,12 @@ export default function App() {
               onToggleSkip={handleToggleSkip}
               onUpdateTime={handleUpdateTime}
               onResetSchedule={handleResetSchedule}
+            />
+
+            {/* Feature after study plan schedule: Studied Hours & Breaks Taken Tracker */}
+            <StudySummaryTracker
+              schedule={schedule}
+              is24Hour={is24Hour}
             />
           </main>
         )}

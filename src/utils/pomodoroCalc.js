@@ -453,10 +453,13 @@ export function computeInteractiveScheduleStats({
       completedPomodoros: 0,
       totalPomodoros: 0,
       completedBreaks: 0,
+      totalBreaks: 0,
       skippedBreaks: 0,
       totalFocusMinutes: 0,
       completedFocusMinutes: 0,
+      remainingFocusMinutes: 0,
       totalBreakMinutes: 0,
+      completedBreakMinutes: 0,
       finalCompletionDate: currentTime,
       studySlipMinutes: 0,
       currentSlipMinutes: 0,
@@ -483,6 +486,10 @@ export function computeInteractiveScheduleStats({
 
   const totalBreakMinutes = breakItems
     .filter((item) => item.status !== 'skipped')
+    .reduce((acc, item) => acc + item.durationMinutes, 0);
+
+  const completedBreakMinutes = breakItems
+    .filter((item) => item.status === 'completed')
     .reduce((acc, item) => acc + item.durationMinutes, 0);
 
   const finalItem = schedule[schedule.length - 1];
@@ -535,10 +542,13 @@ export function computeInteractiveScheduleStats({
     completedPomodoros,
     totalPomodoros: focusItems.length,
     completedBreaks,
+    totalBreaks: breakItems.length,
     skippedBreaks,
     totalFocusMinutes,
     completedFocusMinutes,
+    remainingFocusMinutes: Math.max(0, totalFocusMinutes - completedFocusMinutes),
     totalBreakMinutes,
+    completedBreakMinutes,
     finalCompletionDate,
     studySlipMinutes,
     currentSlipMinutes: activeSlipMinutes,
@@ -821,14 +831,47 @@ export function formatDurationWords(totalMinutes) {
   return `${hours} ${hours === 1 ? 'hour' : 'hours'} ${remainderMins} min`;
 }
 
+/**
+ * Formats a duration in minutes into a clean decimal hours string (e.g. "1.5", "2", "0.75")
+ */
+export function formatHoursDecimal(totalMinutes) {
+  const mins = Math.max(0, Math.round(totalMinutes));
+  const hrs = mins / 60;
+  let formatted = hrs.toFixed(2);
+  formatted = formatted.replace(/\.00$/, '').replace(/(\.\d)0$/, '$1');
+  return formatted;
+}
+
+/**
+ * Formats a duration in minutes into a readable hours string (e.g. "1.5 hrs", "1 hr", "0.5 hrs")
+ */
+export function formatHours(totalMinutes) {
+  const mins = Math.max(0, Math.round(totalMinutes));
+  const hrs = mins / 60;
+  let formatted = hrs.toFixed(2);
+  formatted = formatted.replace(/\.00$/, '').replace(/(\.\d)0$/, '$1');
+  const num = parseFloat(formatted);
+  return `${formatted} ${num === 1 ? 'hr' : 'hrs'}`;
+}
+
+/**
+ * Formats deadline overrun in hours (e.g. "1.5 hrs", "0.5 hrs", "2 hrs")
+ */
+export function formatOverrunHours(overrunMinutes) {
+  if (!overrunMinutes || overrunMinutes <= 0) return '0 hrs';
+  return formatHours(overrunMinutes);
+}
+
 export function formatSlipMinutes(slipMinutes) {
   if (slipMinutes === 0) {
     return { text: 'On Track', status: 'ontrack', diff: '0m' };
   }
   if (slipMinutes > 0) {
-    return { text: `+${slipMinutes}m Behind`, status: 'behind', diff: `+${slipMinutes}m` };
+    const dur = formatDuration(slipMinutes);
+    return { text: `+${dur} Behind`, status: 'behind', diff: `+${dur}` };
   }
-  return { text: `${slipMinutes}m Ahead`, status: 'ahead', diff: `${slipMinutes}m` };
+  const dur = formatDuration(Math.abs(slipMinutes));
+  return { text: `${dur} Ahead`, status: 'ahead', diff: `-${dur}` };
 }
 
 export function formatCountdown(totalSeconds) {

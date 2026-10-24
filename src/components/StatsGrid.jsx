@@ -9,7 +9,7 @@ import {
   Activity,
   AlertTriangle,
 } from 'lucide-react';
-import { formatDuration, formatClockTime, formatSlipMinutes } from '../utils/pomodoroCalc';
+import { formatDuration, formatClockTime, formatSlipMinutes, formatHours, formatHoursDecimal, formatOverrunHours } from '../utils/pomodoroCalc';
 
 export function StatsGrid({
   pomodorosPossible,
@@ -95,11 +95,11 @@ export function StatsGrid({
           </div>
           <p className="stat-description">
             {actualDelayMinutes > 0
-              ? `Current session started ${actualDelayMinutes}m late vs schedule`
+              ? `Current session started ${formatDuration(actualDelayMinutes)} late vs schedule`
               : studySlipMinutes > 0
-              ? `Overall schedule shifted by +${studySlipMinutes}m (finish: +${finalSlipMinutes}m)`
+              ? `Overall schedule shifted by +${formatDuration(studySlipMinutes)} (finish: +${formatDuration(finalSlipMinutes)})`
               : studySlipMinutes < 0
-              ? `Ahead of original baseline plan by ${Math.abs(studySlipMinutes)}m`
+              ? `Ahead of original baseline plan by ${formatDuration(Math.abs(studySlipMinutes))}`
               : 'Perfect timing — exactly aligned with original baseline plan'}
           </p>
         </div>
@@ -163,7 +163,7 @@ export function StatsGrid({
           <p className="stat-description">
             {deadlineOverrunMinutes > 0 ? (
               <span className="text-amber-400 font-medium">
-                Overruns target deadline by {deadlineOverrunMinutes}m
+                Overruns target deadline by {formatOverrunHours(deadlineOverrunMinutes)} ({deadlineOverrunMinutes}m)
               </span>
             ) : pomodorosPossible > 0 ? (
               `When you will finish your ${pomodorosPossible}${
@@ -214,9 +214,11 @@ export function StatsGrid({
             {deadlineOverrunMinutes > 0 ? (
               <>
                 <span className="stat-value font-mono text-amber-400">
-                  +{deadlineOverrunMinutes}m
+                  +{formatHoursDecimal(deadlineOverrunMinutes)}
                 </span>
-                <span className="stat-unit text-amber-400/80">overrun</span>
+                <span className="stat-unit text-amber-400/80">
+                  {parseFloat(formatHoursDecimal(deadlineOverrunMinutes)) === 1 ? 'hr' : 'hrs'} overrun ({deadlineOverrunMinutes}m)
+                </span>
               </>
             ) : (
               <>
@@ -227,7 +229,7 @@ export function StatsGrid({
           </div>
           <p className="stat-description">
             {deadlineOverrunMinutes > 0
-              ? 'Schedule finishes after your chosen deadline due to delays or custom times'
+              ? `Schedule extends ${formatHours(deadlineOverrunMinutes)} (${deadlineOverrunMinutes}m) past your target deadline`
               : 'Free margin between final complete session and your deadline'}
           </p>
         </div>
