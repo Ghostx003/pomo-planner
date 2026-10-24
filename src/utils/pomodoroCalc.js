@@ -816,19 +816,14 @@ export function formatDuration(totalMinutes) {
   const hours = Math.floor(mins / 60);
   const remainderMins = mins % 60;
 
-  if (hours === 0) return `${remainderMins}m`;
-  if (remainderMins === 0) return `${hours}h`;
-  return `${hours}h ${remainderMins}m`;
+  if (hours === 0) return `${remainderMins} min`;
+  const hrText = hours === 1 ? '1 hour' : `${hours} hours`;
+  if (remainderMins === 0) return hrText;
+  return `${hrText} ${remainderMins} min`;
 }
 
 export function formatDurationWords(totalMinutes) {
-  const mins = Math.max(0, Math.round(totalMinutes));
-  const hours = Math.floor(mins / 60);
-  const remainderMins = mins % 60;
-
-  if (hours === 0) return `${remainderMins} min`;
-  if (remainderMins === 0) return `${hours} ${hours === 1 ? 'hour' : 'hours'}`;
-  return `${hours} ${hours === 1 ? 'hour' : 'hours'} ${remainderMins} min`;
+  return formatDuration(totalMinutes);
 }
 
 /**
@@ -843,19 +838,19 @@ export function formatHoursAndMinutes(totalMinutes, short = false) {
   const hours = Math.floor(mins / 60);
   const remainderMins = mins % 60;
 
-  const hrUnit = (h) => (short ? 'hr' : h === 1 ? 'hour' : 'hours');
-  const minUnit = (m) => (short ? 'min' : m === 1 ? 'minute' : 'minutes');
+  const hrText = hours === 1 ? '1 hour' : `${hours} hours`;
+  const minText = (m) => (short ? `${m} min` : `${m} ${m === 1 ? 'minute' : 'minutes'}`);
 
   if (hours === 0 && remainderMins === 0) {
     return short ? '0 min' : '0 minutes';
   }
   if (hours === 0) {
-    return `${remainderMins} ${minUnit(remainderMins)}`;
+    return minText(remainderMins);
   }
   if (remainderMins === 0) {
-    return `${hours} ${hrUnit(hours)}`;
+    return hrText;
   }
-  return `${hours} ${hrUnit(hours)} ${remainderMins} ${minUnit(remainderMins)}`;
+  return `${hrText} ${minText(remainderMins)}`;
 }
 
 /**

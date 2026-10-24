@@ -158,7 +158,7 @@ export function StudySummaryTracker({ schedule = [], is24Hour = false }) {
               {formatHoursAndMinutes(completedFocusMinutes)}
             </div>
             <div className="summary-card-sub-info font-mono text-xs text-slate-300">
-              {completedFocusMinutes} min total focus time logged
+              {formatDuration(completedFocusMinutes)} total focus time logged
             </div>
             <div className="summary-card-progress-wrap mt-2.5">
               <div className="summary-progress-bar-bg">
@@ -226,7 +226,7 @@ export function StudySummaryTracker({ schedule = [], is24Hour = false }) {
               {formatHoursAndMinutes(remainingFocusMinutes)}
             </div>
             <div className="summary-card-sub-info font-mono text-xs text-slate-300">
-              {remainingFocusMinutes} min focus remaining
+              {formatDuration(remainingFocusMinutes)} focus remaining
             </div>
             <div className="summary-card-footer-info mt-2.5">
               <span className="text-xs text-slate-400">
@@ -255,7 +255,7 @@ export function StudySummaryTracker({ schedule = [], is24Hour = false }) {
             </div>
             <div className="summary-card-footer-info mt-2.5">
               <span className="text-xs text-indigo-300/80">
-                Study/Break ratio: {totalFocusMinutes}m focus / {totalBreakMinutes}m rest
+                Study/Break ratio: {formatDuration(totalFocusMinutes)} focus / {formatDuration(totalBreakMinutes)} rest
               </span>
             </div>
           </div>

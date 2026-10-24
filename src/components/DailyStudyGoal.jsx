@@ -321,7 +321,7 @@ export function DailyStudyGoal({
         <div className="goal-summary-grid">
           <div className="summary-metric-item">
             <span className="summary-metric-label">Daily Study Goal</span>
-            <span className="summary-metric-val font-mono">{metrics.goalHours} hrs</span>
+            <span className="summary-metric-val font-mono">{formatDuration(metrics.targetFocusMinutes)}</span>
             <span className="summary-metric-sub">Pure focused learning</span>
           </div>
 
@@ -331,7 +331,7 @@ export function DailyStudyGoal({
               {metrics.requiredPomodoros}
             </span>
             <span className="summary-metric-sub">
-              ⌈{metrics.targetFocusMinutes}m ÷ {metrics.focusMinutes}m⌉
+              ⌈{formatDuration(metrics.targetFocusMinutes)} ÷ {metrics.focusMinutes}m⌉
             </span>
           </div>
 
@@ -451,7 +451,7 @@ export function DailyStudyGoal({
               <span className="progress-stat-val font-mono text-indigo-300">
                 {formatDuration(progress.remainingFocusMinutes)}
               </span>
-              <span className="progress-stat-sub">To achieve {metrics.goalHours}h target</span>
+              <span className="progress-stat-sub">To achieve {formatDuration(metrics.targetFocusMinutes)} target</span>
             </div>
 
             <div className="progress-stat">
@@ -522,7 +522,7 @@ export function DailyStudyGoal({
                       )}
                     </div>
                     <span className="hero-duration font-mono">
-                      {activeItem.durationMinutes} min {activeItem.type === 'focus' ? 'deep focus study' : 'rest & stretch'}
+                      {formatDuration(activeItem.durationMinutes)} {activeItem.type === 'focus' ? 'deep focus study' : 'rest & stretch'}
                     </span>
                   </div>
                 </div>
@@ -590,7 +590,7 @@ export function DailyStudyGoal({
                     </div>
 
                     <span className="upcoming-duration font-mono text-xs text-slate-400">
-                      {item.durationMinutes} min
+                      {formatDuration(item.durationMinutes)}
                     </span>
                   </div>
                 ))}
@@ -668,7 +668,7 @@ export function DailyStudyGoal({
 
                   <div className="history-row-right">
                     <span className="history-duration font-mono text-xs text-slate-400">
-                      {item.durationMinutes}m {isFocus ? 'study' : 'rest'}
+                      {formatDuration(item.durationMinutes)} {isFocus ? 'study' : 'rest'}
                     </span>
 
                     <button

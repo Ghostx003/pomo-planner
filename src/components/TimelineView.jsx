@@ -18,6 +18,7 @@ import {
   dateToTimeInputValue,
   parseTimeToDate,
   formatHours,
+  formatDuration,
 } from '../utils/pomodoroCalc';
 
 /**
@@ -294,7 +295,7 @@ export function TimelineView({
                       </div>
 
                       <span className="row-duration font-mono text-xs text-slate-400">
-                        {item.durationMinutes} min {isFocus ? 'focus' : 'rest'}
+                        {formatDuration(item.durationMinutes)} {isFocus ? 'focus' : 'rest'}
                         {isCompleted && item.actualCompletedAt && (
                           <span className="text-emerald-400 ml-1.5 font-medium">
                             • Finished at {formatClockTime(item.actualCompletedAt, is24Hour, false)}

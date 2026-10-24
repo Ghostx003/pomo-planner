@@ -119,7 +119,7 @@ export function StatsGrid({
           </div>
           <div className="stat-main">
             <span className="stat-value font-mono">{formatDuration(totalFocusMinutes)}</span>
-            <span className="stat-unit">({totalFocusMinutes}m)</span>
+            <span className="stat-unit">({pomodorosPossible} {pomodorosPossible === 1 ? 'session' : 'sessions'})</span>
           </div>
           <p className="stat-description">
             Pure uninterrupted study time across all planned sessions

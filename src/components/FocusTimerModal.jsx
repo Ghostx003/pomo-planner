@@ -12,7 +12,7 @@ import {
   Volume2,
   VolumeX,
 } from 'lucide-react';
-import { formatCountdown, playChimeSound, triggerHaptic } from '../utils/pomodoroCalc';
+import { formatCountdown, formatDuration, playChimeSound, triggerHaptic } from '../utils/pomodoroCalc';
 
 export function FocusTimerModal({
   isOpen,
@@ -245,7 +245,7 @@ export function FocusTimerModal({
               type="button"
               className={`timeline-dot-btn ${idx === currentIndex ? 'dot-active' : idx < currentIndex ? 'dot-completed' : ''}`}
               onClick={() => selectSession(idx)}
-              title={`${step.title} (${step.durationMinutes}m)`}
+              title={`${step.title} (${formatDuration(step.durationMinutes)})`}
             />
           ))}
         </div>
