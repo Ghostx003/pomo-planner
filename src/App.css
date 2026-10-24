@@ -4059,6 +4059,25 @@
   gap: 0.45rem;
 }
 
+.summary-card-val-text {
+  font-size: 1.32rem;
+  font-weight: 800;
+  line-height: 1.25;
+  letter-spacing: -0.015em;
+  word-break: break-word;
+}
+
+.stat-overrun-split {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.stat-overrun-split .stat-value {
+  font-size: 1.22rem;
+  line-height: 1.25;
+}
+
 .summary-card-big-val {
   font-size: 1.85rem;
   font-weight: 800;

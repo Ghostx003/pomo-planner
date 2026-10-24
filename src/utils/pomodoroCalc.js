@@ -832,6 +832,33 @@ export function formatDurationWords(totalMinutes) {
 }
 
 /**
+ * Formats a duration in minutes into hours and minutes in natural language
+ * e.g. 108 -> "1 hour 48 minutes"
+ *      60  -> "1 hour"
+ *      90  -> "1 hour 30 minutes"
+ *      45  -> "45 minutes"
+ */
+export function formatHoursAndMinutes(totalMinutes, short = false) {
+  const mins = Math.max(0, Math.round(totalMinutes));
+  const hours = Math.floor(mins / 60);
+  const remainderMins = mins % 60;
+
+  const hrUnit = (h) => (short ? 'hr' : h === 1 ? 'hour' : 'hours');
+  const minUnit = (m) => (short ? 'min' : m === 1 ? 'minute' : 'minutes');
+
+  if (hours === 0 && remainderMins === 0) {
+    return short ? '0 min' : '0 minutes';
+  }
+  if (hours === 0) {
+    return `${remainderMins} ${minUnit(remainderMins)}`;
+  }
+  if (remainderMins === 0) {
+    return `${hours} ${hrUnit(hours)}`;
+  }
+  return `${hours} ${hrUnit(hours)} ${remainderMins} ${minUnit(remainderMins)}`;
+}
+
+/**
  * Formats a duration in minutes into a clean decimal hours string (e.g. "1.5", "2", "0.75")
  */
 export function formatHoursDecimal(totalMinutes) {
@@ -843,23 +870,18 @@ export function formatHoursDecimal(totalMinutes) {
 }
 
 /**
- * Formats a duration in minutes into a readable hours string (e.g. "1.5 hrs", "1 hr", "0.5 hrs")
+ * Formats a duration in minutes into a readable hours and minutes string (e.g. "1 hour 48 minutes", "1 hour", "45 minutes")
  */
-export function formatHours(totalMinutes) {
-  const mins = Math.max(0, Math.round(totalMinutes));
-  const hrs = mins / 60;
-  let formatted = hrs.toFixed(2);
-  formatted = formatted.replace(/\.00$/, '').replace(/(\.\d)0$/, '$1');
-  const num = parseFloat(formatted);
-  return `${formatted} ${num === 1 ? 'hr' : 'hrs'}`;
+export function formatHours(totalMinutes, short = false) {
+  return formatHoursAndMinutes(totalMinutes, short);
 }
 
 /**
- * Formats deadline overrun in hours (e.g. "1.5 hrs", "0.5 hrs", "2 hrs")
+ * Formats deadline overrun in hours and minutes (e.g. "1 hour 48 minutes", "45 minutes", "2 hours")
  */
-export function formatOverrunHours(overrunMinutes) {
-  if (!overrunMinutes || overrunMinutes <= 0) return '0 hrs';
-  return formatHours(overrunMinutes);
+export function formatOverrunHours(overrunMinutes, short = false) {
+  if (!overrunMinutes || overrunMinutes <= 0) return short ? '0 min' : '0 minutes';
+  return formatHoursAndMinutes(overrunMinutes, short);
 }
 
 export function formatSlipMinutes(slipMinutes) {

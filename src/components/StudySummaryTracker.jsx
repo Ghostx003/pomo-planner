@@ -16,7 +16,7 @@ import {
   formatDuration,
   formatClockTime,
   formatHours,
-  formatHoursDecimal,
+  formatHoursAndMinutes,
 } from '../utils/pomodoroCalc';
 
 export function StudySummaryTracker({ schedule = [], is24Hour = false }) {
@@ -154,16 +154,11 @@ export function StudySummaryTracker({ schedule = [], is24Hour = false }) {
             </div>
           </div>
           <div className="summary-card-body">
-            <div className="summary-card-val-row">
-              <span className="summary-card-big-val font-mono text-emerald-400">
-                {formatHoursDecimal(completedFocusMinutes)}
-              </span>
-              <span className="summary-card-unit">
-                {parseFloat(formatHoursDecimal(completedFocusMinutes)) === 1 ? 'hour' : 'hours'}
-              </span>
+            <div className="summary-card-val-text font-mono text-emerald-400">
+              {formatHoursAndMinutes(completedFocusMinutes)}
             </div>
             <div className="summary-card-sub-info font-mono text-xs text-slate-300">
-              {formatDuration(completedFocusMinutes)} ({completedFocusMinutes}m) total study
+              {completedFocusMinutes} min total focus time logged
             </div>
             <div className="summary-card-progress-wrap mt-2.5">
               <div className="summary-progress-bar-bg">
@@ -198,7 +193,7 @@ export function StudySummaryTracker({ schedule = [], is24Hour = false }) {
               </span>
             </div>
             <div className="summary-card-sub-info font-mono text-xs text-slate-300">
-              {formatDuration(completedBreakMinutes)} ({formatHours(completedBreakMinutes)}) rest logged
+              {formatHoursAndMinutes(completedBreakMinutes)} rest logged
             </div>
             <div className="summary-card-footer-info mt-2.5">
               <div className="break-status-pills">
@@ -227,16 +222,11 @@ export function StudySummaryTracker({ schedule = [], is24Hour = false }) {
             </div>
           </div>
           <div className="summary-card-body">
-            <div className="summary-card-val-row">
-              <span className="summary-card-big-val font-mono text-sky-400">
-                {formatHoursDecimal(remainingFocusMinutes)}
-              </span>
-              <span className="summary-card-unit">
-                {parseFloat(formatHoursDecimal(remainingFocusMinutes)) === 1 ? 'hour' : 'hours'} left
-              </span>
+            <div className="summary-card-val-text font-mono text-sky-400">
+              {formatHoursAndMinutes(remainingFocusMinutes)}
             </div>
             <div className="summary-card-sub-info font-mono text-xs text-slate-300">
-              {formatDuration(remainingFocusMinutes)} ({remainingFocusMinutes}m) remaining
+              {remainingFocusMinutes} min focus remaining
             </div>
             <div className="summary-card-footer-info mt-2.5">
               <span className="text-xs text-slate-400">
@@ -257,16 +247,11 @@ export function StudySummaryTracker({ schedule = [], is24Hour = false }) {
             </div>
           </div>
           <div className="summary-card-body">
-            <div className="summary-card-val-row">
-              <span className="summary-card-big-val font-mono text-indigo-300">
-                {formatHoursDecimal(totalFocusMinutes)}
-              </span>
-              <span className="summary-card-unit">
-                {parseFloat(formatHoursDecimal(totalFocusMinutes)) === 1 ? 'hour' : 'hours'} target
-              </span>
+            <div className="summary-card-val-text font-mono text-indigo-300">
+              {formatHoursAndMinutes(totalFocusMinutes)}
             </div>
             <div className="summary-card-sub-info font-mono text-xs text-slate-300">
-              {focusCount} Pomodoros • {formatHours(totalPlannedMinutes)} total schedule
+              {focusCount} Pomodoros • {formatHoursAndMinutes(totalPlannedMinutes)} total schedule
             </div>
             <div className="summary-card-footer-info mt-2.5">
               <span className="text-xs text-indigo-300/80">
@@ -346,7 +331,7 @@ export function StudySummaryTracker({ schedule = [], is24Hour = false }) {
                           )}
                         </div>
                         <div className="chip-meta text-[11px] font-mono text-slate-400">
-                          <span>{item.durationMinutes}m ({formatHours(item.durationMinutes)})</span>
+                          <span>{formatHoursAndMinutes(item.durationMinutes)}</span>
                           <span>•</span>
                           <span className="text-emerald-400">
                             Finished {formatClockTime(completedDate, is24Hour, false)}

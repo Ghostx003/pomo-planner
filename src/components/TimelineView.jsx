@@ -206,7 +206,7 @@ export function TimelineView({
         <div className="overrun-alert-banner animate-fade-in">
           <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
           <div className="overrun-text">
-            <strong>Schedule Overrun:</strong> Timeline extends {formatHours(deadlineOverrunMinutes)} ({deadlineOverrunMinutes}m) past your target deadline (finishing at{' '}
+            <strong>Schedule Overrun:</strong> Timeline extends {formatHours(deadlineOverrunMinutes)} past your target deadline (finishing at{' '}
             <span className="font-mono font-bold">{formatClockTime(schedule[schedule.length - 1].endTime, is24Hour, false)}</span>).
           </div>
         </div>

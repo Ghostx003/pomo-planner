@@ -9,7 +9,12 @@ import {
   Activity,
   AlertTriangle,
 } from 'lucide-react';
-import { formatDuration, formatClockTime, formatSlipMinutes, formatHours, formatHoursDecimal, formatOverrunHours } from '../utils/pomodoroCalc';
+import {
+  formatDuration,
+  formatClockTime,
+  formatSlipMinutes,
+  formatHoursAndMinutes,
+} from '../utils/pomodoroCalc';
 
 export function StatsGrid({
   pomodorosPossible,
@@ -163,7 +168,7 @@ export function StatsGrid({
           <p className="stat-description">
             {deadlineOverrunMinutes > 0 ? (
               <span className="text-amber-400 font-medium">
-                Overruns target deadline by {formatOverrunHours(deadlineOverrunMinutes)} ({deadlineOverrunMinutes}m)
+                Overruns target deadline by {formatHoursAndMinutes(deadlineOverrunMinutes)}
               </span>
             ) : pomodorosPossible > 0 ? (
               `When you will finish your ${pomodorosPossible}${
@@ -212,14 +217,12 @@ export function StatsGrid({
           </div>
           <div className="stat-main">
             {deadlineOverrunMinutes > 0 ? (
-              <>
+              <div className="stat-overrun-split">
                 <span className="stat-value font-mono text-amber-400">
-                  +{formatHoursDecimal(deadlineOverrunMinutes)}
+                  +{formatHoursAndMinutes(deadlineOverrunMinutes)}
                 </span>
-                <span className="stat-unit text-amber-400/80">
-                  {parseFloat(formatHoursDecimal(deadlineOverrunMinutes)) === 1 ? 'hr' : 'hrs'} overrun ({deadlineOverrunMinutes}m)
-                </span>
-              </>
+                <span className="stat-unit text-amber-400/80">overrun</span>
+              </div>
             ) : (
               <>
                 <span className="stat-value font-mono">{formatDuration(bufferMinutes)}</span>
@@ -229,7 +232,7 @@ export function StatsGrid({
           </div>
           <p className="stat-description">
             {deadlineOverrunMinutes > 0
-              ? `Schedule extends ${formatHours(deadlineOverrunMinutes)} (${deadlineOverrunMinutes}m) past your target deadline`
+              ? `Schedule extends ${formatHoursAndMinutes(deadlineOverrunMinutes)} past your target deadline`
               : 'Free margin between final complete session and your deadline'}
           </p>
         </div>
