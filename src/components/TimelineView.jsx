@@ -119,9 +119,7 @@ function TimeNode({
 
 export function TimelineView({
   schedule,
-  bufferMinutes,
   deadlineOverrunMinutes = 0,
-  deadlineDate,
   is24Hour,
   onToggleComplete,
   onToggleSkip,
@@ -352,34 +350,6 @@ export function TimelineView({
                 </div>
               );
             })}
-
-            {/* Buffer time row at the end if schedule finishes before deadline */}
-            {deadlineOverrunMinutes === 0 && bufferMinutes > 0 && (
-              <div className="schedule-row schedule-row-buffer">
-                <div className="row-left-group">
-                  <div className="row-marker marker-buffer">
-                    <Clock className="w-4 h-4 text-sky-400" />
-                  </div>
-                  <div>
-                    <span className="row-title font-semibold text-sky-300">
-                      Spare Buffer Margin
-                    </span>
-                    <span className="row-duration font-mono text-xs text-sky-400/80 block">
-                      {bufferMinutes}m unallocated buffer time before deadline
-                    </span>
-                  </div>
-                </div>
-
-                <div className="row-right-group">
-                  <div className="time-capsule time-capsule-buffer font-mono">
-                    <span className="text-xs text-sky-300 font-medium">
-                      Target deadline: {formatClockTime(deadlineDate, is24Hour, false)}
-                    </span>
-                  </div>
-                  <div className="row-action-slot" />
-                </div>
-              </div>
-            )}
           </div>
         </div>
       )}

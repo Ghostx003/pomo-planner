@@ -558,9 +558,7 @@ export default function App() {
             {/* Interactive Study Plan Scheduler Checklist */}
             <TimelineView
               schedule={schedule}
-              bufferMinutes={scheduleStats.bufferMinutes}
               deadlineOverrunMinutes={scheduleStats.deadlineOverrunMinutes}
-              deadlineDate={deadlineDate}
               is24Hour={is24Hour}
               onToggleComplete={handleToggleComplete}
               onToggleSkip={handleToggleSkip}
