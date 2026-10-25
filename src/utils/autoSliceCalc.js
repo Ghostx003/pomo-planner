@@ -174,17 +174,33 @@ export function buildSessionsSequence(counts, mode = 'random') {
 /**
  * Converts a sequence of session lengths into PomoPlan phase structures.
  * Compresses consecutive identical durations into a single phase with sessionsCount.
+ * Each session tier gets its own specific break duration (default: 25m -> 5m, 35m -> 7m, 45m -> 10m).
  */
-export function buildPhasesFromSequence(sequence, breakMinutes = 5) {
+export function buildPhasesFromSequence(sequence, breakMinutesByTier = { 25: 5, 35: 7, 45: 10 }) {
   if (!Array.isArray(sequence) || sequence.length === 0) {
     return [];
   }
+
+  const getBreakForTier = (focusMins) => {
+    if (typeof breakMinutesByTier === 'number') {
+      return Math.max(0, parseInt(breakMinutesByTier, 10) || 0);
+    }
+    if (breakMinutesByTier && breakMinutesByTier[focusMins] !== undefined) {
+      return Math.max(0, parseInt(breakMinutesByTier[focusMins], 10) || 0);
+    }
+    // Standard defaults: 25m -> 5m, 35m -> 7m, 45m -> 10m
+    if (focusMins === 25) return 5;
+    if (focusMins === 35) return 7;
+    if (focusMins === 45) return 10;
+    return 5;
+  };
 
   const phases = [];
   let current = null;
 
   sequence.forEach((focusMins) => {
-    if (current && current.focusMinutes === focusMins) {
+    const tierBreak = getBreakForTier(focusMins);
+    if (current && current.focusMinutes === focusMins && current.breakMinutes === tierBreak) {
       current.sessionsCount += 1;
     } else {
       if (current) {
@@ -196,7 +212,7 @@ export function buildPhasesFromSequence(sequence, breakMinutes = 5) {
         name: `Phase ${phases.length + 1} (${focusMins}m)`,
         sessionsCount: 1,
         focusMinutes: focusMins,
-        breakMinutes: Math.max(0, parseInt(breakMinutes, 10) || 5),
+        breakMinutes: tierBreak,
       };
     }
   });

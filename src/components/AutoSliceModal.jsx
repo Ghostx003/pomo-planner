@@ -27,16 +27,23 @@ export function AutoSliceModal({
   onApplyAutoSlice,
   currentTime,
 }) {
-  // Target Study Hours (default 9 as highlighted by user)
+  // Target Study Hours (default 9 as requested)
   const [targetHours, setTargetHours] = useState(9);
 
-  // Break duration per session (default 5 mins)
-  const [breakMinutes, setBreakMinutes] = useState(5);
+  // Breaks depend on session duration:
+  // 25m session -> 5m break
+  // 35m session -> 7m break
+  // 45m session -> 10m break
+  const [tierBreaks, setTierBreaks] = useState({
+    25: 5,
+    35: 7,
+    45: 10,
+  });
 
   // Auto-balance other tiers when moving a slider (default true)
   const [autoBalance, setAutoBalance] = useState(true);
 
-  // Arrangement Mode: 'random' | 'balanced' | 'grouped' | 'ascending'
+  // Arrangement Mode: 'random' | 'balanced' | 'grouped'
   const [arrangementMode, setArrangementMode] = useState('random');
 
   // Shuffle seed counter to trigger re-rolls for random mode
@@ -84,16 +91,25 @@ export function AutoSliceModal({
     }
   };
 
-  // Stepper increment / decrement
+  // Stepper increment / decrement for sessions count
   const handleStepCount = (tier, delta) => {
     const current = counts[tier] || 0;
     const next = Math.max(0, current + delta);
     handleSliderChange(tier, next);
   };
 
+  // Handler for individual tier break changes
+  const handleTierBreakChange = (tier, newBreak) => {
+    const bVal = Math.max(0, Math.min(60, parseInt(newBreak, 10) || 0));
+    triggerHaptic('light');
+    setTierBreaks((prev) => ({
+      ...prev,
+      [tier]: bVal,
+    }));
+  };
+
   // Sequence of sessions generated based on counts, mode, and shuffle seed
   const sessionSequence = useMemo(() => {
-    // shuffleSeed is passed to force recomputation on re-shuffle
     void shuffleSeed;
     return buildSessionsSequence(counts, arrangementMode);
   }, [counts, arrangementMode, shuffleSeed]);
@@ -107,7 +123,16 @@ export function AutoSliceModal({
   const excessMinutes = totalFocusMinutes - targetMinutes;
 
   const totalSessionsCount = (counts[25] || 0) + (counts[35] || 0) + (counts[45] || 0);
-  const totalBreakMinutes = totalSessionsCount * breakMinutes;
+
+  // Total Break Minutes correctly computed per tier break:
+  const totalBreakMinutes = useMemo(() => {
+    return (
+      (counts[25] || 0) * (tierBreaks[25] || 0) +
+      (counts[35] || 0) * (tierBreaks[35] || 0) +
+      (counts[45] || 0) * (tierBreaks[45] || 0)
+    );
+  }, [counts, tierBreaks]);
+
   const totalPlanMinutes = totalFocusMinutes + totalBreakMinutes;
 
   // Estimated completion time
@@ -124,8 +149,8 @@ export function AutoSliceModal({
     triggerHaptic('success');
     fireConfetti();
 
-    // Generate phase blocks from the chosen sequence
-    const generatedPhases = buildPhasesFromSequence(sessionSequence, breakMinutes);
+    // Generate phase blocks from the chosen sequence with tier-specific breaks
+    const generatedPhases = buildPhasesFromSequence(sessionSequence, tierBreaks);
 
     onApplyAutoSlice({
       phases: generatedPhases,
@@ -158,9 +183,8 @@ export function AutoSliceModal({
   if (!isOpen) return null;
 
   const presetHours = [3, 4, 6, 8, 9, 10, 12];
-  const breakPresets = [0, 5, 7, 10, 15];
 
-  // Tier info array for rendering sliders
+  // Tier info array for rendering sliders & tier-specific breaks
   const tiers = [
     {
       duration: 25,
@@ -168,8 +192,9 @@ export function AutoSliceModal({
       sublabel: 'Sprint Focus',
       colorClass: 'tier-25',
       badgeColor: 'badge-emerald',
-      barColor: '#10b981',
       maxSlider: 30,
+      breakPresets: [0, 3, 5, 7, 10],
+      defaultBreak: 5,
     },
     {
       duration: 35,
@@ -177,8 +202,9 @@ export function AutoSliceModal({
       sublabel: 'Standard Focus',
       colorClass: 'tier-35',
       badgeColor: 'badge-sky',
-      barColor: '#0ea5e9',
       maxSlider: 25,
+      breakPresets: [0, 5, 7, 10, 12],
+      defaultBreak: 7,
     },
     {
       duration: 45,
@@ -186,8 +212,9 @@ export function AutoSliceModal({
       sublabel: 'Deep Work',
       colorClass: 'tier-45',
       badgeColor: 'badge-indigo',
-      barColor: '#818cf8',
       maxSlider: 20,
+      breakPresets: [0, 7, 10, 15, 20],
+      defaultBreak: 10,
     },
   ];
 
@@ -216,7 +243,7 @@ export function AutoSliceModal({
                 <span className="auto-slice-tag-smart">Smart Generator</span>
               </div>
               <p className="auto-slice-subtitle">
-                Enter study hours. PomoPlan divides them across 25m, 35m & 45m sessions and auto-balances them with live sliders.
+                Distribute {targetHours} hours across 25m, 35m & 45m Pomodoros with tailored breaks & live balancing sliders.
               </p>
             </div>
           </div>
@@ -230,351 +257,401 @@ export function AutoSliceModal({
           </button>
         </div>
 
-        {/* Modal Body */}
+        {/* Modal Body - 2-Column Responsive Layout */}
         <div className="auto-slice-modal-body">
-          {/* Section 1: Study Hours & Break Input */}
-          <div className="auto-slice-input-card">
-            <div className="auto-slice-row-between">
-              <div>
-                <label className="auto-slice-field-label">
-                  <Flame className="w-4 h-4 text-emerald-400" />
-                  <span>Target Study Hours</span>
-                </label>
-                <p className="auto-slice-field-sub">
-                  How many hours do you plan to study today?
-                </p>
-              </div>
+          <div className="auto-slice-columns-grid">
+            {/* LEFT COLUMN: Target Hours & Tier Sliders with Custom Breaks */}
+            <div className="auto-slice-col-main">
+              {/* Target Hours Input */}
+              <div className="auto-slice-input-card">
+                <div className="auto-slice-row-between">
+                  <div>
+                    <label className="auto-slice-field-label">
+                      <Flame className="w-4 h-4 text-emerald-400" />
+                      <span>Target Study Goal</span>
+                    </label>
+                    <p className="auto-slice-field-sub">
+                      Enter your desired study hours to divide into Pomodoro sessions
+                    </p>
+                  </div>
 
-              {/* Hours Stepper & Input */}
-              <div className="auto-slice-hours-stepper">
-                <button
-                  type="button"
-                  className="auto-slice-stepper-btn"
-                  onClick={() => handleHoursChange(Math.max(1, targetHours - 1))}
-                  disabled={targetHours <= 1}
-                  aria-label="Decrease 1 hour"
-                >
-                  <Minus className="w-4 h-4" />
-                </button>
-                <div className="auto-slice-hours-val">
-                  <input
-                    type="number"
-                    min="1"
-                    max="24"
-                    step="0.5"
-                    value={targetHours}
-                    onChange={(e) => handleHoursChange(e.target.value)}
-                    className="auto-slice-hours-input font-mono"
-                    aria-label="Study hours"
-                  />
-                  <span className="auto-slice-hours-unit">hrs</span>
+                  {/* Hours Stepper & Input */}
+                  <div className="auto-slice-hours-stepper">
+                    <button
+                      type="button"
+                      className="auto-slice-stepper-btn"
+                      onClick={() => handleHoursChange(Math.max(1, targetHours - 1))}
+                      disabled={targetHours <= 1}
+                      aria-label="Decrease 1 hour"
+                    >
+                      <Minus className="w-4 h-4" />
+                    </button>
+                    <div className="auto-slice-hours-val">
+                      <input
+                        type="number"
+                        min="1"
+                        max="24"
+                        step="0.5"
+                        value={targetHours}
+                        onChange={(e) => handleHoursChange(e.target.value)}
+                        className="auto-slice-hours-input font-mono"
+                        aria-label="Study hours"
+                      />
+                      <span className="auto-slice-hours-unit">hrs</span>
+                    </div>
+                    <button
+                      type="button"
+                      className="auto-slice-stepper-btn"
+                      onClick={() => handleHoursChange(Math.min(24, targetHours + 1))}
+                      disabled={targetHours >= 24}
+                      aria-label="Increase 1 hour"
+                    >
+                      <Plus className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
-                <button
-                  type="button"
-                  className="auto-slice-stepper-btn"
-                  onClick={() => handleHoursChange(Math.min(24, targetHours + 1))}
-                  disabled={targetHours >= 24}
-                  aria-label="Increase 1 hour"
-                >
-                  <Plus className="w-4 h-4" />
-                </button>
+
+                {/* Quick Hours Presets */}
+                <div className="auto-slice-presets-row">
+                  <span className="text-[11px] text-slate-400 font-medium">Quick Pick:</span>
+                  <div className="auto-slice-presets-list">
+                    {presetHours.map((h) => (
+                      <button
+                        key={h}
+                        type="button"
+                        className={`auto-slice-preset-chip ${targetHours === h ? 'chip-active' : ''}`}
+                        onClick={() => handleHoursChange(h)}
+                      >
+                        {h} hrs
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Sliders Card: 25m, 35m, 45m with Per-Tier Break Selectors */}
+              <div className="auto-slice-sliders-card">
+                <div className="auto-slice-sliders-header">
+                  <div className="flex items-center gap-2">
+                    <Sliders className="w-4 h-4 text-indigo-400" />
+                    <h4 className="auto-slice-section-title">
+                      Pomodoro Tiers & Breaks ({targetHours}h split)
+                    </h4>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <label
+                      className="auto-balance-toggle-label"
+                      title="When enabled, sliding one tier auto-adjusts the other two to maintain your study hours"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={autoBalance}
+                        onChange={(e) => setAutoBalance(e.target.checked)}
+                        className="auto-balance-checkbox"
+                      />
+                      <span>Auto-balance</span>
+                    </label>
+
+                    <button
+                      type="button"
+                      className="auto-slice-reset-equal-btn"
+                      onClick={handleResetToEqual}
+                      title="Reset sections to equal 1/3 division"
+                    >
+                      <RotateCcw className="w-3 h-3" />
+                      <span>Equal 1/3</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="auto-slice-tiers-list">
+                  {tiers.map((t) => {
+                    const count = counts[t.duration] || 0;
+                    const tierMinutes = count * t.duration;
+                    const sharePercent =
+                      totalFocusMinutes > 0
+                        ? Math.round((tierMinutes / totalFocusMinutes) * 100)
+                        : 0;
+                    const currentBreak = tierBreaks[t.duration] ?? t.defaultBreak;
+
+                    return (
+                      <div key={t.duration} className={`auto-slice-tier-item ${t.colorClass}`}>
+                        {/* Row 1: Badge, Label, Count Stepper */}
+                        <div className="tier-top-row">
+                          <div className="tier-badge-label-group">
+                            <span className={`tier-duration-pill ${t.badgeColor}`}>
+                              {t.label}
+                            </span>
+                            <div>
+                              <span className="tier-sublabel">{t.sublabel}</span>
+                              <span className="tier-share-text font-mono">
+                                • {formatDuration(tierMinutes)} ({sharePercent}%)
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Sessions Count Stepper */}
+                          <div className="tier-count-stepper">
+                            <button
+                              type="button"
+                              className="tier-btn-sm"
+                              onClick={() => handleStepCount(t.duration, -1)}
+                              disabled={count <= 0}
+                              title={`Decrease 1 session of ${t.label}`}
+                            >
+                              <Minus className="w-3.5 h-3.5" />
+                            </button>
+
+                            <div className="tier-count-display font-mono">
+                              <strong>{count}</strong>
+                              <span>{count === 1 ? 'session' : 'sessions'}</span>
+                            </div>
+
+                            <button
+                              type="button"
+                              className="tier-btn-sm"
+                              onClick={() => handleStepCount(t.duration, 1)}
+                              disabled={count >= t.maxSlider}
+                              title={`Increase 1 session of ${t.label}`}
+                            >
+                              <Plus className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Row 2: Smooth Range Slider */}
+                        <div className="tier-slider-row">
+                          <input
+                            type="range"
+                            min="0"
+                            max={t.maxSlider}
+                            value={count}
+                            onChange={(e) => handleSliderChange(t.duration, e.target.value)}
+                            className={`tier-range-slider slider-${t.duration}`}
+                            aria-label={`Number of ${t.label} sessions`}
+                          />
+                        </div>
+
+                        {/* Row 3: Dedicated Break Duration for THIS Pomodoro Type */}
+                        <div className="tier-break-selector-row">
+                          <div className="tier-break-label-box">
+                            <Coffee className="w-3.5 h-3.5 text-amber-400" />
+                            <span className="tier-break-label">Break for {t.duration}m sessions:</span>
+                          </div>
+
+                          <div className="tier-break-controls">
+                            <div className="tier-break-chips-list">
+                              {t.breakPresets.map((b) => (
+                                <button
+                                  key={b}
+                                  type="button"
+                                  className={`tier-break-chip ${currentBreak === b ? 'break-chip-active' : ''}`}
+                                  onClick={() => handleTierBreakChange(t.duration, b)}
+                                >
+                                  {b === 0 ? 'None' : `${b}m`}
+                                </button>
+                              ))}
+                            </div>
+
+                            {/* Break Fine Stepper */}
+                            <div className="tier-break-stepper">
+                              <button
+                                type="button"
+                                className="tier-break-step-btn"
+                                onClick={() => handleTierBreakChange(t.duration, currentBreak - 1)}
+                                disabled={currentBreak <= 0}
+                                title="Decrease break 1m"
+                              >
+                                -
+                              </button>
+                              <span className="tier-break-step-val font-mono">
+                                {currentBreak}m
+                              </span>
+                              <button
+                                type="button"
+                                className="tier-break-step-btn"
+                                onClick={() => handleTierBreakChange(t.duration, currentBreak + 1)}
+                                disabled={currentBreak >= 60}
+                                title="Increase break 1m"
+                              >
+                                +
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             </div>
 
-            {/* Quick Hours Presets */}
-            <div className="auto-slice-presets-row">
-              <span className="text-[11px] text-slate-400 font-medium">Quick Pick:</span>
-              <div className="auto-slice-presets-list">
-                {presetHours.map((h) => (
-                  <button
-                    key={h}
-                    type="button"
-                    className={`auto-slice-preset-chip ${targetHours === h ? 'chip-active' : ''}`}
-                    onClick={() => handleHoursChange(h)}
-                  >
-                    {h} hrs
-                  </button>
-                ))}
-              </div>
-            </div>
+            {/* RIGHT COLUMN: Arrangement, Sequence Preview, Live Summary & Actions */}
+            <div className="auto-slice-col-side">
+              {/* Session Arrangement & Shuffle */}
+              <div className="auto-slice-arrangement-card">
+                <div className="auto-slice-arr-header">
+                  <div className="flex items-center gap-2">
+                    <Shuffle className="w-4 h-4 text-sky-400" />
+                    <h4 className="auto-slice-section-title">Session Arrangement</h4>
+                  </div>
+                  {arrangementMode === 'random' && (
+                    <button
+                      type="button"
+                      className="reshuffle-btn"
+                      onClick={handleReshuffle}
+                      title="Randomize the sequence order again"
+                    >
+                      <Shuffle className="w-3.5 h-3.5" />
+                      <span>Re-shuffle</span>
+                    </button>
+                  )}
+                </div>
 
-            {/* Break Duration Selector */}
-            <div className="auto-slice-break-row">
-              <div className="flex items-center gap-1.5">
-                <Coffee className="w-3.5 h-3.5 text-amber-400" />
-                <span className="text-xs text-slate-300 font-medium">Break per session:</span>
-              </div>
-              <div className="auto-slice-break-chips">
-                {breakPresets.map((b) => (
+                <div className="arrangement-tabs">
                   <button
-                    key={b}
                     type="button"
-                    className={`auto-slice-break-chip ${breakMinutes === b ? 'break-active' : ''}`}
+                    className={`arr-tab ${arrangementMode === 'random' ? 'arr-tab-active' : ''}`}
                     onClick={() => {
                       triggerHaptic('light');
-                      setBreakMinutes(b);
+                      setArrangementMode('random');
                     }}
                   >
-                    {b === 0 ? 'None' : `${b}m`}
+                    <span>🎲 Random Shuffle</span>
                   </button>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Section 2: Interactive Sliders with Live Auto-Balancing */}
-          <div className="auto-slice-sliders-card">
-            <div className="auto-slice-sliders-header">
-              <div className="flex items-center gap-2">
-                <Sliders className="w-4 h-4 text-indigo-400" />
-                <h4 className="auto-slice-section-title">
-                  Session Balance Sliders ({targetHours}h split equally)
-                </h4>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <label className="auto-balance-toggle-label" title="When enabled, sliding one tier auto-adjusts the other two to maintain your study hours">
-                  <input
-                    type="checkbox"
-                    checked={autoBalance}
-                    onChange={(e) => setAutoBalance(e.target.checked)}
-                    className="auto-balance-checkbox"
-                  />
-                  <span>Auto-balance other sections</span>
-                </label>
-
-                <button
-                  type="button"
-                  className="auto-slice-reset-equal-btn"
-                  onClick={handleResetToEqual}
-                  title="Reset sections to equal 1/3 division"
-                >
-                  <RotateCcw className="w-3 h-3" />
-                  <span>Equal 1/3</span>
-                </button>
-              </div>
-            </div>
-
-            <p className="auto-slice-section-hint">
-              Slide any section to increase its Pomodoros. The other sections immediately recalculate to meet or exceed your {targetHours}-hour target!
-            </p>
-
-            <div className="auto-slice-tiers-list">
-              {tiers.map((t) => {
-                const count = counts[t.duration] || 0;
-                const tierMinutes = count * t.duration;
-                const sharePercent =
-                  totalFocusMinutes > 0
-                    ? Math.round((tierMinutes / totalFocusMinutes) * 100)
-                    : 0;
-
-                return (
-                  <div key={t.duration} className={`auto-slice-tier-item ${t.colorClass}`}>
-                    <div className="tier-top-row">
-                      <div className="tier-badge-label-group">
-                        <span className={`tier-duration-pill ${t.badgeColor}`}>
-                          {t.label}
-                        </span>
-                        <div>
-                          <span className="tier-sublabel">{t.sublabel}</span>
-                          <span className="tier-share-text font-mono">
-                            • {formatDuration(tierMinutes)} ({sharePercent}%)
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Stepper Count Controls */}
-                      <div className="tier-count-stepper">
-                        <button
-                          type="button"
-                          className="tier-btn-sm"
-                          onClick={() => handleStepCount(t.duration, -1)}
-                          disabled={count <= 0}
-                          title={`Decrease 1 session of ${t.label}`}
-                        >
-                          <Minus className="w-3.5 h-3.5" />
-                        </button>
-
-                        <div className="tier-count-display font-mono">
-                          <strong>{count}</strong>
-                          <span>{count === 1 ? 'session' : 'sessions'}</span>
-                        </div>
-
-                        <button
-                          type="button"
-                          className="tier-btn-sm"
-                          onClick={() => handleStepCount(t.duration, 1)}
-                          disabled={count >= t.maxSlider}
-                          title={`Increase 1 session of ${t.label}`}
-                        >
-                          <Plus className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Smooth Range Slider */}
-                    <div className="tier-slider-row">
-                      <input
-                        type="range"
-                        min="0"
-                        max={t.maxSlider}
-                        value={count}
-                        onChange={(e) => handleSliderChange(t.duration, e.target.value)}
-                        className={`tier-range-slider slider-${t.duration}`}
-                        aria-label={`Number of ${t.label} sessions`}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Section 3: Session Arrangement & Randomization */}
-          <div className="auto-slice-arrangement-card">
-            <div className="auto-slice-arr-header">
-              <div className="flex items-center gap-2">
-                <Shuffle className="w-4 h-4 text-sky-400" />
-                <h4 className="auto-slice-section-title">Session Arrangement</h4>
-              </div>
-              {arrangementMode === 'random' && (
-                <button
-                  type="button"
-                  className="reshuffle-btn"
-                  onClick={handleReshuffle}
-                  title="Randomize the sequence order again"
-                >
-                  <Shuffle className="w-3.5 h-3.5" />
-                  <span>Re-shuffle Order</span>
-                </button>
-              )}
-            </div>
-
-            <div className="arrangement-tabs">
-              <button
-                type="button"
-                className={`arr-tab ${arrangementMode === 'random' ? 'arr-tab-active' : ''}`}
-                onClick={() => {
-                  triggerHaptic('light');
-                  setArrangementMode('random');
-                }}
-              >
-                <span>🎲 Random Shuffle</span>
-              </button>
-              <button
-                type="button"
-                className={`arr-tab ${arrangementMode === 'balanced' ? 'arr-tab-active' : ''}`}
-                onClick={() => {
-                  triggerHaptic('light');
-                  setArrangementMode('balanced');
-                }}
-              >
-                <span>🌊 Balanced Wave</span>
-              </button>
-              <button
-                type="button"
-                className={`arr-tab ${arrangementMode === 'grouped' ? 'arr-tab-active' : ''}`}
-                onClick={() => {
-                  triggerHaptic('light');
-                  setArrangementMode('grouped');
-                }}
-              >
-                <span>📊 Grouped Phases</span>
-              </button>
-            </div>
-
-            {/* Sequence Preview Pill Track */}
-            <div className="sequence-preview-box">
-              <span className="sequence-preview-label font-mono">
-                Order Preview ({sessionSequence.length} sessions):
-              </span>
-              <div className="sequence-pills-track">
-                {sessionSequence.map((dur, idx) => (
-                  <span
-                    key={idx}
-                    className={`sequence-pill pill-${dur}`}
-                    title={`Session #${idx + 1}: ${dur} minutes focus`}
+                  <button
+                    type="button"
+                    className={`arr-tab ${arrangementMode === 'balanced' ? 'arr-tab-active' : ''}`}
+                    onClick={() => {
+                      triggerHaptic('light');
+                      setArrangementMode('balanced');
+                    }}
                   >
-                    {dur}m
-                  </span>
-                ))}
+                    <span>🌊 Wave</span>
+                  </button>
+                  <button
+                    type="button"
+                    className={`arr-tab ${arrangementMode === 'grouped' ? 'arr-tab-active' : ''}`}
+                    onClick={() => {
+                      triggerHaptic('light');
+                      setArrangementMode('grouped');
+                    }}
+                  >
+                    <span>📊 Grouped</span>
+                  </button>
+                </div>
+
+                {/* Sequence Preview Pill Track */}
+                <div className="sequence-preview-box">
+                  <div className="flex items-center justify-between">
+                    <span className="sequence-preview-label font-mono">
+                      Order Preview ({sessionSequence.length} sessions):
+                    </span>
+                    <span className="text-[11px] text-slate-400 font-mono">
+                      Scroll to view all →
+                    </span>
+                  </div>
+                  <div className="sequence-pills-track">
+                    {sessionSequence.map((dur, idx) => {
+                      const bDur = tierBreaks[dur] ?? 5;
+                      return (
+                        <span
+                          key={idx}
+                          className={`sequence-pill pill-${dur}`}
+                          title={`Session #${idx + 1}: ${dur}m study + ${bDur}m break`}
+                        >
+                          <span className="pill-dur-text">{dur}m</span>
+                          <span className="pill-break-sub font-mono">+{bDur}m</span>
+                        </span>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              {/* Comprehensive Live Summary Card */}
+              <div className="auto-slice-summary-card">
+                <div className="summary-card-title-row">
+                  <span className="summary-heading">Total Plan Summary</span>
+                  {excessMinutes > 0 && (
+                    <span className="summary-bonus-pill">
+                      +{formatDuration(excessMinutes)} over target
+                    </span>
+                  )}
+                </div>
+
+                <div className="summary-grid-2x2">
+                  <div className="summary-stat-cell">
+                    <span className="summary-stat-label">Pure Study</span>
+                    <span className="summary-stat-val text-emerald-400 font-mono">
+                      {formatDuration(totalFocusMinutes)}
+                    </span>
+                  </div>
+
+                  <div className="summary-stat-cell">
+                    <span className="summary-stat-label">Total Sessions</span>
+                    <span className="summary-stat-val text-indigo-300 font-mono">
+                      {totalSessionsCount} Pomodoros
+                    </span>
+                  </div>
+
+                  <div className="summary-stat-cell">
+                    <span className="summary-stat-label">Total Breaks</span>
+                    <span className="summary-stat-val text-amber-300 font-mono">
+                      {formatDuration(totalBreakMinutes)}
+                    </span>
+                  </div>
+
+                  <div className="summary-stat-cell">
+                    <span className="summary-stat-label">Total Planned</span>
+                    <span className="summary-stat-val text-sky-400 font-mono">
+                      {formatDuration(totalPlanMinutes)}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Align Deadline Checkbox */}
+                <div className="auto-slice-deadline-box">
+                  <label className="align-deadline-checkbox-label">
+                    <input
+                      type="checkbox"
+                      checked={alignDeadline}
+                      onChange={(e) => setAlignDeadline(e.target.checked)}
+                      className="auto-balance-checkbox"
+                    />
+                    <Clock className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                    <span className="text-xs">
+                      Align finish deadline ({formatDuration(totalPlanMinutes)} from now
+                      {finishTimeStr ? ` • finishes at ${finishTimeStr}` : ''})
+                    </span>
+                  </label>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="auto-slice-actions-box">
+                <button
+                  type="button"
+                  className="auto-slice-cancel-btn"
+                  onClick={onClose}
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="button"
+                  className="auto-slice-apply-btn"
+                  onClick={handleApply}
+                  disabled={totalSessionsCount === 0}
+                >
+                  <Sparkles className="w-4 h-4" />
+                  <span>Apply Auto Slice to Schedule</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
               </div>
             </div>
           </div>
-
-          {/* Section 4: Live Total Statistics Summary */}
-          <div className="auto-slice-summary-bar">
-            <div className="summary-stat-item">
-              <span className="summary-stat-label">Total Pure Focus</span>
-              <div className="summary-stat-val text-emerald-400 font-mono">
-                {formatDuration(totalFocusMinutes)}
-                {excessMinutes > 0 && (
-                  <span className="summary-bonus-pill">
-                    +{formatDuration(excessMinutes)} bonus
-                  </span>
-                )}
-              </div>
-            </div>
-
-            <div className="summary-stat-item">
-              <span className="summary-stat-label">Total Sessions</span>
-              <div className="summary-stat-val text-indigo-300 font-mono">
-                {totalSessionsCount} Pomodoros
-              </div>
-            </div>
-
-            <div className="summary-stat-item">
-              <span className="summary-stat-label">Total Breaks</span>
-              <div className="summary-stat-val text-amber-300 font-mono">
-                {formatDuration(totalBreakMinutes)}
-              </div>
-            </div>
-
-            <div className="summary-stat-item">
-              <span className="summary-stat-label">Total Plan Duration</span>
-              <div className="summary-stat-val text-sky-400 font-mono">
-                {formatDuration(totalPlanMinutes)}
-              </div>
-            </div>
-          </div>
-
-          {/* Align Deadline Option */}
-          <div className="auto-slice-deadline-option">
-            <label className="align-deadline-checkbox-label">
-              <input
-                type="checkbox"
-                checked={alignDeadline}
-                onChange={(e) => setAlignDeadline(e.target.checked)}
-                className="auto-balance-checkbox"
-              />
-              <Clock className="w-4 h-4 text-emerald-400" />
-              <span>
-                Align target finish deadline to this schedule ({formatDuration(totalPlanMinutes)} from now{finishTimeStr ? ` • finishes at ${finishTimeStr}` : ''})
-              </span>
-            </label>
-          </div>
-        </div>
-
-        {/* Modal Footer Actions */}
-        <div className="auto-slice-modal-footer">
-          <button
-            type="button"
-            className="auto-slice-cancel-btn"
-            onClick={onClose}
-          >
-            Cancel
-          </button>
-
-          <button
-            type="button"
-            className="auto-slice-apply-btn"
-            onClick={handleApply}
-            disabled={totalSessionsCount === 0}
-          >
-            <Sparkles className="w-4 h-4" />
-            <span>Apply Auto Slice to Schedule</span>
-            <ArrowRight className="w-4 h-4" />
-          </button>
         </div>
       </div>
     </div>
