@@ -11,6 +11,8 @@ import {
   PlusCircle,
   RotateCcw,
   Sliders,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import { PomodoroScheduleTable } from './PomodoroScheduleTable';
 import { AutoSliceModal } from './AutoSliceModal';
@@ -30,6 +32,37 @@ export function DurationControls({
 }) {
   const isDivided = timingMode === 'divided';
   const [isAutoSliceOpen, setIsAutoSliceOpen] = useState(false);
+
+  // Minimize toggles for Quick Presets and Configured Phases
+  const [isPresetsMinimized, setIsPresetsMinimized] = useState(() => {
+    return localStorage.getItem('pomoplan_presets_minimized') === 'true';
+  });
+
+  const [isPhasesMinimized, setIsPhasesMinimized] = useState(() => {
+    return localStorage.getItem('pomoplan_phases_minimized') === 'true';
+  });
+
+  const togglePresetsMinimized = () => {
+    triggerHaptic('light');
+    setIsPresetsMinimized((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem('pomoplan_presets_minimized', String(next));
+      } catch {}
+      return next;
+    });
+  };
+
+  const togglePhasesMinimized = () => {
+    triggerHaptic('light');
+    setIsPhasesMinimized((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem('pomoplan_phases_minimized', String(next));
+      } catch {}
+      return next;
+    });
+  };
 
   const handleApplyAutoSlice = ({ phases: newPhases, totalDurationMinutes, alignDeadline }) => {
     if (setTimingMode) setTimingMode('divided');
@@ -417,42 +450,87 @@ export function DurationControls({
           {/* Quick Preset Buttons Bar */}
           <div className="quick-presets-box glass-card">
             <div className="quick-presets-header">
-              <div className="flex items-center gap-2">
+              <div
+                className="flex items-center gap-2 cursor-pointer select-none"
+                onClick={togglePresetsMinimized}
+                title="Click to toggle minimizing quick presets"
+              >
                 <Sparkles className="w-4 h-4 text-indigo-400" />
                 <span className="input-label mb-0">Quick Add Phase Options:</span>
+                {isPresetsMinimized && (
+                  <span className="minimized-pill-tag">
+                    ({quickDividedPresets.length} presets hidden)
+                  </span>
+                )}
               </div>
-              <span className="text-[12px] text-slate-400">
-                Click any option to add a phase block
-              </span>
+              <div className="flex items-center gap-2">
+                {!isPresetsMinimized && (
+                  <span className="text-[12px] text-slate-400">
+                    Click any option to add a phase block
+                  </span>
+                )}
+                <button
+                  type="button"
+                  className="section-minimize-btn"
+                  onClick={togglePresetsMinimized}
+                  title={isPresetsMinimized ? 'Expand Quick Presets' : 'Minimize Quick Presets'}
+                  aria-label={isPresetsMinimized ? 'Expand Quick Presets' : 'Minimize Quick Presets'}
+                >
+                  {isPresetsMinimized ? (
+                    <>
+                      <span>Expand</span>
+                      <ChevronDown className="w-3.5 h-3.5" />
+                    </>
+                  ) : (
+                    <>
+                      <span>Minimize</span>
+                      <ChevronUp className="w-3.5 h-3.5" />
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
 
-            <div className="quick-presets-buttons">
-              {quickDividedPresets.map((preset, idx) => (
-                <button
-                  key={idx}
-                  type="button"
-                  className="quick-phase-preset-btn"
-                  onClick={() =>
-                    handleAddPhase({
-                      count: preset.count,
-                      focus: preset.focus,
-                      breakTime: preset.breakTime,
-                    })
-                  }
-                  title={`Add ${preset.count} sessions of ${preset.focus} mins with ${preset.breakTime}m break`}
-                >
-                  <Plus className="w-3.5 h-3.5 text-indigo-400" />
-                  <span className="font-medium">{preset.label}</span>
-                  <span className="preset-break-tag font-mono">{preset.breakTime}m break</span>
-                </button>
-              ))}
-            </div>
+            {!isPresetsMinimized && (
+              <div className="quick-presets-buttons animate-fade-in">
+                {quickDividedPresets.map((preset, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    className="quick-phase-preset-btn"
+                    onClick={() =>
+                      handleAddPhase({
+                        count: preset.count,
+                        focus: preset.focus,
+                        breakTime: preset.breakTime,
+                      })
+                    }
+                    title={`Add ${preset.count} sessions of ${preset.focus} mins with ${preset.breakTime}m break`}
+                  >
+                    <Plus className="w-3.5 h-3.5 text-indigo-400" />
+                    <span className="font-medium">{preset.label}</span>
+                    <span className="preset-break-tag font-mono">{preset.breakTime}m break</span>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* List of Configured Phases */}
           <div className="phases-list-container">
             <div className="phases-list-header">
-              <h4 className="phases-heading">Configured Study Phases ({phases.length})</h4>
+              <div
+                className="flex items-center gap-2 cursor-pointer select-none"
+                onClick={togglePhasesMinimized}
+                title="Click to toggle minimizing configured study phases"
+              >
+                <h4 className="phases-heading">Configured Study Phases ({phases.length})</h4>
+                {isPhasesMinimized && (
+                  <span className="minimized-pill-tag">
+                    ({phases.length} {phases.length === 1 ? 'phase' : 'phases'} hidden)
+                  </span>
+                )}
+              </div>
               <div className="phases-header-actions">
                 <button
                   type="button"
@@ -478,16 +556,40 @@ export function DurationControls({
                 <button
                   type="button"
                   className="action-btn-sm action-btn-focus-sm"
-                  onClick={() => handleAddPhase()}
+                  onClick={() => {
+                    if (isPhasesMinimized) setIsPhasesMinimized(false);
+                    handleAddPhase();
+                  }}
                   title="Add another custom phase block"
                 >
                   <PlusCircle className="w-3.5 h-3.5" />
                   <span>Add Phase</span>
                 </button>
+                <button
+                  type="button"
+                  className="section-minimize-btn"
+                  onClick={togglePhasesMinimized}
+                  title={isPhasesMinimized ? 'Expand Configured Phases' : 'Minimize Configured Phases'}
+                  aria-label={isPhasesMinimized ? 'Expand Configured Phases' : 'Minimize Configured Phases'}
+                >
+                  {isPhasesMinimized ? (
+                    <>
+                      <span>Expand</span>
+                      <ChevronDown className="w-3.5 h-3.5" />
+                    </>
+                  ) : (
+                    <>
+                      <span>Minimize</span>
+                      <ChevronUp className="w-3.5 h-3.5" />
+                    </>
+                  )}
+                </button>
               </div>
             </div>
 
-            <div className="phases-cards-grid">
+            {!isPhasesMinimized && (
+              <>
+                <div className="phases-cards-grid animate-fade-in">
               {phases.map((phase, pIdx) => {
                 const sCount = Math.max(1, parseInt(phase.sessionsCount, 10) || 1);
                 const fMins = Math.max(1, parseInt(phase.focusMinutes, 10) || 25);
@@ -731,7 +833,9 @@ export function DurationControls({
               <PlusCircle className="w-4 h-4 text-indigo-400" />
               <span>+ Add Another Study Phase</span>
             </button>
-          </div>
+          </>
+        )}
+      </div>
 
           {/* Your Complete Pomodoro Schedule Breakdown Table */}
           <PomodoroScheduleTable
