@@ -44,8 +44,8 @@ export function calculateStudyPlan({
   const remainingSeconds = Math.floor(remainingMs / 1000);
   const remainingMinutes = remainingSeconds / 60;
 
-  // Handle Divided / Multi-Phase Timing Mode
-  if (timingMode === 'divided' && Array.isArray(phases) && phases.length > 0) {
+  // Handle Divided / Multi-Phase Timing Mode & Auto Slice
+  if ((timingMode === 'divided' || timingMode === 'auto_slice') && Array.isArray(phases) && phases.length > 0) {
     const validPhases = phases.filter(
       (p) => (parseInt(p.sessionsCount, 10) || 0) > 0 && (parseInt(p.focusMinutes, 10) || 0) > 0
     );
@@ -629,7 +629,7 @@ export function calculateDailyGoalMetrics(
   timingMode = 'uniform',
   phases = []
 ) {
-  if (timingMode === 'divided' && Array.isArray(phases) && phases.length > 0) {
+  if ((timingMode === 'divided' || timingMode === 'auto_slice') && Array.isArray(phases) && phases.length > 0) {
     const summary = calculatePhasesSummary(phases);
     const hours = Number((summary.totalStudyMinutes / 60).toFixed(1));
     return {
@@ -685,7 +685,7 @@ export function generateUntimedGoalStack(
   let breakCount = 0;
   let focusCount = 0;
 
-  if (timingMode === 'divided' && Array.isArray(phases) && phases.length > 0) {
+  if ((timingMode === 'divided' || timingMode === 'auto_slice') && Array.isArray(phases) && phases.length > 0) {
     const totalSessions = phases.reduce(
       (sum, p) => sum + (parseInt(p.sessionsCount, 10) || 1),
       0

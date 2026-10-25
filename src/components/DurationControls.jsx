@@ -15,7 +15,7 @@ import {
   ChevronUp,
 } from 'lucide-react';
 import { PomodoroScheduleTable } from './PomodoroScheduleTable';
-import { AutoSliceModal } from './AutoSliceModal';
+import { AutoSliceInlineView } from './AutoSliceInlineView';
 import { formatDuration, triggerHaptic } from '../utils/pomodoroCalc';
 
 export function DurationControls({
@@ -31,7 +31,8 @@ export function DurationControls({
   onSyncDeadlineToSchedule,
 }) {
   const isDivided = timingMode === 'divided';
-  const [isAutoSliceOpen, setIsAutoSliceOpen] = useState(false);
+  const isAutoSlice = timingMode === 'auto_slice';
+  const isUniform = !isDivided && !isAutoSlice;
 
   // Minimize toggles for Quick Presets and Configured Phases
   const [isPresetsMinimized, setIsPresetsMinimized] = useState(() => {
@@ -65,11 +66,16 @@ export function DurationControls({
   };
 
   const handleApplyAutoSlice = ({ phases: newPhases, totalDurationMinutes, alignDeadline }) => {
-    if (setTimingMode) setTimingMode('divided');
     if (setPhases) setPhases(newPhases);
     if (alignDeadline && onSyncDeadlineToSchedule) {
       onSyncDeadlineToSchedule(totalDurationMinutes);
     }
+    setTimeout(() => {
+      const scheduleEl = document.getElementById('study-plan-schedule');
+      if (scheduleEl) {
+        scheduleEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 100);
   };
 
   // Uniform Presets
@@ -206,7 +212,7 @@ export function DurationControls({
         <div className="timing-mode-tabs">
           <button
             type="button"
-            className={`timing-mode-tab ${!isDivided ? 'timing-tab-active' : ''}`}
+            className={`timing-mode-tab ${isUniform ? 'timing-tab-active' : ''}`}
             onClick={() => {
               triggerHaptic('light');
               setTimingMode('uniform');
@@ -228,10 +234,10 @@ export function DurationControls({
           </button>
           <button
             type="button"
-            className="timing-mode-tab auto-slice-nav-btn"
+            className={`timing-mode-tab auto-slice-nav-btn ${isAutoSlice ? 'timing-tab-active timing-tab-highlight' : ''}`}
             onClick={() => {
               triggerHaptic('light');
-              setIsAutoSliceOpen(true);
+              setTimingMode('auto_slice');
             }}
             title="Auto Slice: Enter study hours to auto-fill & balance 25m, 35m & 45m Pomodoros"
           >
@@ -243,7 +249,7 @@ export function DurationControls({
       </div>
 
       {/* MODE 1: UNIFORM SINGLE TIMING */}
-      {!isDivided && (
+      {isUniform && (
         <div className="uniform-mode-wrapper animate-fade-in">
           <div className="duration-grid">
             {/* Focus Duration Card */}
@@ -418,7 +424,7 @@ export function DurationControls({
             className="auto-slice-callout glass-card"
             onClick={() => {
               triggerHaptic('light');
-              setIsAutoSliceOpen(true);
+              setTimingMode('auto_slice');
             }}
             title="Input your study hours and let Auto Slice equally distribute 25m, 35m & 45m sessions with interactive sliders"
           >
@@ -537,7 +543,7 @@ export function DurationControls({
                   className="action-btn-sm action-btn-auto-slice"
                   onClick={() => {
                     triggerHaptic('light');
-                    setIsAutoSliceOpen(true);
+                    setTimingMode('auto_slice');
                   }}
                   title="Auto Slice: Enter study hours to auto-fill & balance 25m, 35m & 45m Pomodoros"
                 >
@@ -846,13 +852,22 @@ export function DurationControls({
         </div>
       )}
 
-      {/* Auto Slice Interactive Modal */}
-      <AutoSliceModal
-        isOpen={isAutoSliceOpen}
-        onClose={() => setIsAutoSliceOpen(false)}
-        onApplyAutoSlice={handleApplyAutoSlice}
-        currentTime={currentTime}
-      />
+      {/* MODE 3: AUTO SLICE INLINE VIEW (NO SEPARATE MODAL - ALL VERTICAL FLOW) */}
+      {isAutoSlice && (
+        <div className="auto-slice-mode-wrapper animate-fade-in">
+          <AutoSliceInlineView
+            onApplyAutoSlice={handleApplyAutoSlice}
+            currentTime={currentTime}
+          />
+
+          {/* Your Complete Pomodoro Schedule Breakdown Table */}
+          <PomodoroScheduleTable
+            phases={phases}
+            currentTime={currentTime}
+            onSyncDeadline={onSyncDeadlineToSchedule}
+          />
+        </div>
+      )}
     </div>
   );
 }
