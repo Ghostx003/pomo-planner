@@ -1,13 +1,27 @@
-import React from 'react';
-import { Calendar, Clock, Sparkles } from 'lucide-react';
-import { calculatePhasesSummary, formatDurationWords, formatDuration } from '../utils/pomodoroCalc';
+import React, { useState } from 'react';
+import { Calendar, Clock, Sparkles, Check } from 'lucide-react';
+import { calculatePhasesSummary, formatDurationWords, formatDuration, triggerHaptic } from '../utils/pomodoroCalc';
+import { fireConfetti } from '../utils/confetti';
 
 export function PomodoroScheduleTable({
   phases = [],
   currentTime,
   onSyncDeadline,
 }) {
+  const [justAligned, setJustAligned] = useState(false);
   const summary = calculatePhasesSummary(phases);
+
+  const handleAlignDeadline = () => {
+    triggerHaptic('success');
+    fireConfetti();
+    setJustAligned(true);
+    if (onSyncDeadline) {
+      onSyncDeadline(summary.totalDurationMinutes);
+    }
+    setTimeout(() => {
+      setJustAligned(false);
+    }, 2500);
+  };
 
   if (summary.phaseRows.length === 0) {
     return null;
@@ -114,12 +128,21 @@ export function PomodoroScheduleTable({
         {onSyncDeadline && completionDate && (
           <button
             type="button"
-            className="sync-deadline-btn"
-            onClick={() => onSyncDeadline(summary.totalDurationMinutes)}
+            className={`sync-deadline-btn ${justAligned ? 'sync-deadline-btn-success' : ''}`}
+            onClick={handleAlignDeadline}
             title="Set study finish deadline to exactly match this schedule"
           >
-            <Clock className="w-3.5 h-3.5" />
-            <span>Align Finish Time to Schedule</span>
+            {justAligned ? (
+              <>
+                <Check className="w-3.5 h-3.5 text-emerald-300 animate-bounce-short" />
+                <span>Finish Time Aligned! 🎉</span>
+              </>
+            ) : (
+              <>
+                <Clock className="w-3.5 h-3.5" />
+                <span>Align Finish Time to Schedule</span>
+              </>
+            )}
           </button>
         )}
       </div>

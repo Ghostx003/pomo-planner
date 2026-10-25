@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Flame,
   Coffee,
@@ -13,6 +13,7 @@ import {
   Sliders,
 } from 'lucide-react';
 import { PomodoroScheduleTable } from './PomodoroScheduleTable';
+import { AutoSliceModal } from './AutoSliceModal';
 import { formatDuration, triggerHaptic } from '../utils/pomodoroCalc';
 
 export function DurationControls({
@@ -28,6 +29,15 @@ export function DurationControls({
   onSyncDeadlineToSchedule,
 }) {
   const isDivided = timingMode === 'divided';
+  const [isAutoSliceOpen, setIsAutoSliceOpen] = useState(false);
+
+  const handleApplyAutoSlice = ({ phases: newPhases, totalDurationMinutes, alignDeadline }) => {
+    if (setTimingMode) setTimingMode('divided');
+    if (setPhases) setPhases(newPhases);
+    if (alignDeadline && onSyncDeadlineToSchedule) {
+      onSyncDeadlineToSchedule(totalDurationMinutes);
+    }
+  };
 
   // Uniform Presets
   const focusPresets = [
@@ -182,6 +192,19 @@ export function DurationControls({
             <Layers className="w-3.5 h-3.5" />
             <span>Divide Further</span>
             <span className="timing-tab-badge">Custom</span>
+          </button>
+          <button
+            type="button"
+            className="timing-mode-tab auto-slice-nav-btn"
+            onClick={() => {
+              triggerHaptic('light');
+              setIsAutoSliceOpen(true);
+            }}
+            title="Auto Slice: Enter study hours to auto-fill & balance 25m, 35m & 45m Pomodoros"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-amber-300 animate-pulse" />
+            <span>Auto Slice</span>
+            <span className="timing-tab-badge badge-auto-slice">Magic</span>
           </button>
         </div>
       </div>
@@ -355,6 +378,36 @@ export function DurationControls({
               <Layers className="w-3.5 h-3.5" />
             </span>
           </button>
+
+          {/* Auto Slice Target Hours Callout Card */}
+          <button
+            type="button"
+            className="auto-slice-callout glass-card"
+            onClick={() => {
+              triggerHaptic('light');
+              setIsAutoSliceOpen(true);
+            }}
+            title="Input your study hours and let Auto Slice equally distribute 25m, 35m & 45m sessions with interactive sliders"
+          >
+            <div className="callout-content">
+              <div className="callout-icon-box auto-slice-icon-box">
+                <Sparkles className="w-5 h-5 text-amber-300" />
+              </div>
+              <div className="callout-text">
+                <div className="callout-title">
+                  <span>Have a target study duration? Try Auto Slice</span>
+                  <span className="badge badge-warning text-[11px]">Auto Slice</span>
+                </div>
+                <p className="callout-desc">
+                  Input study hours (e.g. 9 hours). Auto Slice divides them equally across 25m, 35m &amp; 45m sessions, randomly arranges them, and provides live balancing sliders.
+                </p>
+              </div>
+            </div>
+            <span className="callout-btn-pill callout-btn-pill-amber">
+              <span>Auto Slice</span>
+              <Sparkles className="w-3.5 h-3.5" />
+            </span>
+          </button>
         </div>
       )}
 
@@ -401,6 +454,18 @@ export function DurationControls({
             <div className="phases-list-header">
               <h4 className="phases-heading">Configured Study Phases ({phases.length})</h4>
               <div className="phases-header-actions">
+                <button
+                  type="button"
+                  className="action-btn-sm action-btn-auto-slice"
+                  onClick={() => {
+                    triggerHaptic('light');
+                    setIsAutoSliceOpen(true);
+                  }}
+                  title="Auto Slice: Enter study hours to auto-fill & balance 25m, 35m & 45m Pomodoros"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                  <span>Auto Slice</span>
+                </button>
                 <button
                   type="button"
                   className="action-btn-sm"
@@ -676,6 +741,14 @@ export function DurationControls({
           />
         </div>
       )}
+
+      {/* Auto Slice Interactive Modal */}
+      <AutoSliceModal
+        isOpen={isAutoSliceOpen}
+        onClose={() => setIsAutoSliceOpen(false)}
+        onApplyAutoSlice={handleApplyAutoSlice}
+        currentTime={currentTime}
+      />
     </div>
   );
 }
