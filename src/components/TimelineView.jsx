@@ -7,11 +7,14 @@ import {
   ChevronDown,
   ChevronUp,
   Check,
+  CheckCircle2,
   X,
   RotateCcw,
   SkipForward,
   AlertCircle,
   Pencil,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 import {
   formatClockTime,
@@ -147,8 +150,161 @@ export function TimelineView({
   ).length;
   const hasAdjustments = schedule.some((t) => t.isManuallyAdjusted);
 
+  // State to toggle visibility of completed/finished sessions (default hidden)
+  const [showFinished, setShowFinished] = useState(false);
+
   // Find the currently active session (first uncompleted session)
   const activeSessionIndex = schedule.findIndex((t) => t.status === 'pending');
+
+  // Separate pending (active/upcoming) and finished (completed/skipped) sessions
+  const pendingItems = [];
+  const finishedItems = [];
+
+  schedule.forEach((item, originalIndex) => {
+    const isFinished = item.status === 'completed' || item.status === 'skipped';
+    if (isFinished) {
+      finishedItems.push({ item, originalIndex });
+    } else {
+      pendingItems.push({ item, originalIndex });
+    }
+  });
+
+  const renderScheduleRow = (item, originalIndex) => {
+    const isFocus = item.type === 'focus';
+    const isCompleted = item.status === 'completed';
+    const isSkipped = item.status === 'skipped';
+    const isCurrent = originalIndex === activeSessionIndex;
+
+    // Previous item's endTime serves as chronological reference
+    const prevItem = originalIndex > 0 ? schedule[originalIndex - 1] : null;
+    const referenceDate = prevItem ? prevItem.endTime : item.startTime;
+
+    return (
+      <div
+        key={item.id}
+        className={`schedule-row ${
+          isFocus ? 'schedule-row-focus' : 'schedule-row-break'
+        } ${isCompleted ? 'row-completed' : ''} ${isSkipped ? 'row-skipped' : ''} ${
+          isCurrent ? 'row-current' : ''
+        }`}
+      >
+        {/* Left Column: Checkbox, Icon, Title, Duration */}
+        <div className="row-left-group">
+          <label
+            className="custom-checkbox-wrapper"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <input
+              type="checkbox"
+              checked={isCompleted}
+              onChange={() => onToggleComplete(item.id)}
+              className="custom-checkbox-input"
+              aria-label={`Mark ${item.title} as ${isCompleted ? 'incomplete' : 'completed'}`}
+            />
+            <span className="custom-checkbox-box">
+              {isCompleted && <Check className="w-3.5 h-3.5 text-white stroke-[2.5]" />}
+            </span>
+          </label>
+
+          <div className={`row-marker ${isFocus ? 'marker-focus' : 'marker-break'}`}>
+            {isFocus ? (
+              <Flame className="w-4 h-4 text-emerald-400" />
+            ) : (
+              <Coffee className="w-4 h-4 text-amber-400" />
+            )}
+          </div>
+
+          <div className="row-title-container">
+            <div className="row-title-line">
+              <span className={`row-title font-semibold ${isCompleted ? 'line-through text-slate-400' : ''}`}>
+                {item.title}
+              </span>
+
+              {item.phaseNumber && (
+                <span className="badge-phase-tag-sm" title={`Phase ${item.phaseNumber}`}>
+                  Phase {item.phaseNumber}
+                </span>
+              )}
+
+              {isCurrent && !isCompleted && (
+                <span className="badge badge-current">
+                  <span className="pulse-dot" />
+                  Up Next
+                </span>
+              )}
+
+              {item.isManuallyAdjusted && (
+                <span className="badge-adjusted" title="This entry or duration was manually adjusted">
+                  Edited
+                </span>
+              )}
+
+              {isCompleted && (
+                <span className="badge badge-focus text-[10px]">Done</span>
+              )}
+
+              {isSkipped && (
+                <span className="badge-skipped text-[10px]">Skipped</span>
+              )}
+            </div>
+
+            <span className="row-duration font-mono text-xs text-slate-400">
+              {formatDuration(item.durationMinutes)} {isFocus ? 'focus' : 'rest'}
+              {isCompleted && item.actualCompletedAt && (
+                <span className="text-emerald-400 ml-1.5 font-medium">
+                  • Finished at {formatClockTime(item.actualCompletedAt, is24Hour, false)}
+                </span>
+              )}
+            </span>
+          </div>
+        </div>
+
+        {/* Right Column: Unified Time Capsule & Fixed Action Slot */}
+        <div className="row-right-group">
+          {/* Unified Time Capsule (Always Fixed Width & Aligned) */}
+          <div className="time-capsule" title="Click start or end time to edit">
+            <TimeNode
+              valueDate={item.startTime}
+              referenceDate={referenceDate}
+              label={`${item.title} Start`}
+              is24Hour={is24Hour}
+              onSave={(newDate) => onUpdateTime(originalIndex, 'startTime', newDate)}
+            />
+
+            <span className="time-capsule-arrow font-mono">→</span>
+
+            <TimeNode
+              valueDate={item.endTime}
+              referenceDate={item.startTime}
+              label={`${item.title} End`}
+              is24Hour={is24Hour}
+              onSave={(newDate) => onUpdateTime(originalIndex, 'endTime', newDate)}
+            />
+          </div>
+
+          {/* Fixed Action Slot */}
+          <div className="row-action-slot">
+            {!isFocus ? (
+              <button
+                type="button"
+                className={`skip-break-btn ${isSkipped ? 'skip-break-active' : ''}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onToggleSkip(item.id);
+                }}
+                title={isSkipped ? 'Undo skip break' : 'Skip this break'}
+              >
+                <SkipForward className="w-3.5 h-3.5" />
+                <span>{isSkipped ? 'Skipped' : 'Skip'}</span>
+              </button>
+            ) : (
+              <span className="action-slot-placeholder" />
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div id="study-plan-schedule" className="timeline-card glass-card">
@@ -177,6 +333,18 @@ export function TimelineView({
         </div>
 
         <div className="timeline-actions">
+          {finishedItems.length > 0 && (
+            <button
+              type="button"
+              className={`toggle-finished-btn ${showFinished ? 'active' : ''}`}
+              onClick={() => setShowFinished(!showFinished)}
+              title={showFinished ? 'Hide finished sessions' : 'Show finished sessions'}
+            >
+              {showFinished ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+              <span>{showFinished ? 'Hide Finished' : `Finished (${finishedItems.length})`}</span>
+            </button>
+          )}
+
           {hasAdjustments && (
             <button
               type="button"
@@ -214,144 +382,61 @@ export function TimelineView({
       {/* Schedule Items List */}
       {isExpanded && (
         <div className="timeline-body animate-fade-in">
+          {/* Active / Pending Sessions on Top */}
           <div className="schedule-list">
-            {schedule.map((item, index) => {
-              const isFocus = item.type === 'focus';
-              const isCompleted = item.status === 'completed';
-              const isSkipped = item.status === 'skipped';
-              const isCurrent = index === activeSessionIndex;
+            {pendingItems.map(({ item, originalIndex }) => renderScheduleRow(item, originalIndex))}
 
-              // Previous item's endTime serves as chronological reference
-              const prevItem = index > 0 ? schedule[index - 1] : null;
-              const referenceDate = prevItem ? prevItem.endTime : item.startTime;
-
-              return (
-                <div
-                  key={item.id}
-                  className={`schedule-row ${
-                    isFocus ? 'schedule-row-focus' : 'schedule-row-break'
-                  } ${isCompleted ? 'row-completed' : ''} ${isSkipped ? 'row-skipped' : ''} ${
-                    isCurrent ? 'row-current' : ''
-                  }`}
-                >
-                  {/* Left Column: Checkbox, Icon, Title, Duration */}
-                  <div className="row-left-group">
-                    <label
-                      className="custom-checkbox-wrapper"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={isCompleted}
-                        onChange={() => onToggleComplete(item.id)}
-                        className="custom-checkbox-input"
-                        aria-label={`Mark ${item.title} as ${isCompleted ? 'incomplete' : 'completed'}`}
-                      />
-                      <span className="custom-checkbox-box">
-                        {isCompleted && <Check className="w-3.5 h-3.5 text-white stroke-[2.5]" />}
-                      </span>
-                    </label>
-
-                    <div className={`row-marker ${isFocus ? 'marker-focus' : 'marker-break'}`}>
-                      {isFocus ? (
-                        <Flame className="w-4 h-4 text-emerald-400" />
-                      ) : (
-                        <Coffee className="w-4 h-4 text-amber-400" />
-                      )}
-                    </div>
-
-                    <div className="row-title-container">
-                      <div className="row-title-line">
-                        <span className={`row-title font-semibold ${isCompleted ? 'line-through text-slate-400' : ''}`}>
-                          {item.title}
-                        </span>
-
-                        {item.phaseNumber && (
-                          <span className="badge-phase-tag-sm" title={`Phase ${item.phaseNumber}`}>
-                            Phase {item.phaseNumber}
-                          </span>
-                        )}
-
-                        {isCurrent && !isCompleted && (
-                          <span className="badge badge-current">
-                            <span className="pulse-dot" />
-                            Up Next
-                          </span>
-                        )}
-
-                        {item.isManuallyAdjusted && (
-                          <span className="badge-adjusted" title="This entry or duration was manually adjusted">
-                            Edited
-                          </span>
-                        )}
-
-                        {isCompleted && (
-                          <span className="badge badge-focus text-[10px]">Done</span>
-                        )}
-
-                        {isSkipped && (
-                          <span className="badge-skipped text-[10px]">Skipped</span>
-                        )}
-                      </div>
-
-                      <span className="row-duration font-mono text-xs text-slate-400">
-                        {formatDuration(item.durationMinutes)} {isFocus ? 'focus' : 'rest'}
-                        {isCompleted && item.actualCompletedAt && (
-                          <span className="text-emerald-400 ml-1.5 font-medium">
-                            • Finished at {formatClockTime(item.actualCompletedAt, is24Hour, false)}
-                          </span>
-                        )}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Right Column: Unified Time Capsule & Fixed Action Slot */}
-                  <div className="row-right-group">
-                    {/* Unified Time Capsule (Always Fixed Width & Aligned) */}
-                    <div className="time-capsule" title="Click start or end time to edit">
-                      <TimeNode
-                        valueDate={item.startTime}
-                        referenceDate={referenceDate}
-                        label={`${item.title} Start`}
-                        is24Hour={is24Hour}
-                        onSave={(newDate) => onUpdateTime(index, 'startTime', newDate)}
-                      />
-
-                      <span className="time-capsule-arrow font-mono">→</span>
-
-                      <TimeNode
-                        valueDate={item.endTime}
-                        referenceDate={item.startTime}
-                        label={`${item.title} End`}
-                        is24Hour={is24Hour}
-                        onSave={(newDate) => onUpdateTime(index, 'endTime', newDate)}
-                      />
-                    </div>
-
-                    {/* Fixed Action Slot (72px wide, so times NEVER shift or zig-zag!) */}
-                    <div className="row-action-slot">
-                      {!isFocus ? (
-                        <button
-                          type="button"
-                          className={`skip-break-btn ${isSkipped ? 'skip-break-active' : ''}`}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onToggleSkip(item.id);
-                          }}
-                          title={isSkipped ? 'Undo skip break' : 'Skip this break'}
-                        >
-                          <SkipForward className="w-3.5 h-3.5" />
-                          <span>{isSkipped ? 'Skipped' : 'Skip'}</span>
-                        </button>
-                      ) : (
-                        <span className="action-slot-placeholder" />
-                      )}
-                    </div>
-                  </div>
+            {/* When all sessions are completed */}
+            {pendingItems.length === 0 && finishedItems.length > 0 && (
+              <div className="all-sessions-done-banner animate-fade-in">
+                <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+                <div>
+                  <h4 className="all-sessions-done-title">All Study Sessions Completed!</h4>
+                  <p className="all-sessions-done-sub">
+                    You have finished all scheduled Pomodoro focus and rest sessions.
+                  </p>
                 </div>
-              );
-            })}
+              </div>
+            )}
           </div>
+
+          {/* Finished Sessions shifted to Bottom & Hidden by default */}
+          {finishedItems.length > 0 && (
+            <div className="finished-sessions-section">
+              <button
+                type="button"
+                className="finished-sessions-toggle-btn"
+                onClick={() => setShowFinished(!showFinished)}
+                aria-expanded={showFinished}
+              >
+                <div className="finished-toggle-left">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                  <span className="finished-toggle-title">
+                    Finished Sessions ({finishedItems.length})
+                  </span>
+                  <span className="badge badge-focus text-[10px]">
+                    {finishedItems.filter(({ item }) => item.type === 'focus').length} focus done
+                  </span>
+                </div>
+                <div className="finished-toggle-right">
+                  <span className="finished-toggle-action-text font-mono text-xs">
+                    {showFinished ? 'Hide' : 'Show'}
+                  </span>
+                  {showFinished ? (
+                    <ChevronUp className="w-4 h-4 text-slate-400" />
+                  ) : (
+                    <ChevronDown className="w-4 h-4 text-slate-400" />
+                  )}
+                </div>
+              </button>
+
+              {showFinished && (
+                <div className="finished-sessions-list animate-fade-in">
+                  {finishedItems.map(({ item, originalIndex }) => renderScheduleRow(item, originalIndex))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>
