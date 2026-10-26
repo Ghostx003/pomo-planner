@@ -104,16 +104,18 @@ body {
   background-repeat: no-repeat;
   display: flex;
   flex-direction: column;
+  width: 100%;
 }
 
 .content-wrapper {
-  max-width: 1080px;
+  max-width: 100%;
   width: 100%;
-  margin: 0 auto;
-  padding: 1.5rem 1.25rem 3.5rem;
+  margin: 0;
+  padding: 1.25rem 1.5rem 3.5rem;
   display: flex;
   flex-direction: column;
   gap: 1.75rem;
+  box-sizing: border-box;
 }
 
 /* Tabular numbers for clocks and countdowns */
