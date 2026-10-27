@@ -122,7 +122,6 @@ function TimeNode({
 
 export function TimelineView({
   schedule,
-  deadlineOverrunMinutes = 0,
   is24Hour,
   onToggleComplete,
   onToggleSkip,

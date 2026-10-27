@@ -533,8 +533,6 @@ export default function App() {
               completedPomodoros={scheduleStats.completedPomodoros}
               totalFocusMinutes={scheduleStats.totalFocusMinutes}
               totalBreakMinutes={scheduleStats.totalBreakMinutes}
-              bufferMinutes={scheduleStats.bufferMinutes}
-              deadlineOverrunMinutes={scheduleStats.deadlineOverrunMinutes}
               completionDate={scheduleStats.finalCompletionDate}
               efficiency={activeEfficiency}
               currentTime={currentTime}
@@ -555,7 +553,6 @@ export default function App() {
             {/* Interactive Study Plan Scheduler Checklist */}
             <TimelineView
               schedule={schedule}
-              deadlineOverrunMinutes={scheduleStats.deadlineOverrunMinutes}
               is24Hour={is24Hour}
               onToggleComplete={handleToggleComplete}
               onToggleSkip={handleToggleSkip}

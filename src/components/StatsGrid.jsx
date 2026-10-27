@@ -10,7 +10,6 @@ import {
 import {
   formatDuration,
   formatClockTime,
-  formatHoursAndMinutes,
 } from '../utils/pomodoroCalc';
 
 export function StatsGrid({
@@ -18,8 +17,6 @@ export function StatsGrid({
   completedPomodoros = 0,
   totalFocusMinutes,
   totalBreakMinutes,
-  bufferMinutes,
-  deadlineOverrunMinutes = 0,
   completionDate,
   efficiency,
   currentTime,
@@ -123,7 +120,26 @@ export function StatsGrid({
           </p>
         </div>
 
-        {/* Metric 5: Study Efficiency */}
+        {/* Metric 5: Total Study Duration */}
+        <div className="stat-card glass-card">
+          <div className="stat-header">
+            <span className="stat-label">Total Duration</span>
+            <div className="stat-icon-badge icon-badge-buffer">
+              <Clock className="w-5 h-5" />
+            </div>
+          </div>
+          <div className="stat-main">
+            <span className="stat-value font-mono">
+              {formatDuration(totalFocusMinutes + totalBreakMinutes)}
+            </span>
+            <span className="stat-unit">total</span>
+          </div>
+          <p className="stat-description">
+            Combined focus time and breaks across all scheduled sessions
+          </p>
+        </div>
+
+        {/* Metric 6: Study Efficiency */}
         <div className="stat-card glass-card">
           <div className="stat-header">
             <span className="stat-label">Study Efficiency</span>
@@ -137,42 +153,6 @@ export function StatsGrid({
           </div>
           <p className="stat-description">
             Portion of total available time dedicated to study
-          </p>
-        </div>
-
-        {/* Metric 6: Buffer Time */}
-        <div className="stat-card glass-card">
-          <div className="stat-header">
-            <span className="stat-label">
-              {deadlineOverrunMinutes > 0 ? 'Margin' : 'Buffer Time'}
-            </span>
-            <div
-              className={`stat-icon-badge ${
-                deadlineOverrunMinutes > 0 ? 'icon-badge-break' : 'icon-badge-buffer'
-              }`}
-            >
-              <Clock className="w-5 h-5" />
-            </div>
-          </div>
-          <div className="stat-main">
-            {deadlineOverrunMinutes > 0 ? (
-              <div className="stat-overrun-split">
-                <span className="stat-value font-mono text-slate-200">
-                  +{formatHoursAndMinutes(deadlineOverrunMinutes)}
-                </span>
-                <span className="stat-unit text-slate-400">margin</span>
-              </div>
-            ) : (
-              <>
-                <span className="stat-value font-mono">{formatDuration(bufferMinutes)}</span>
-                <span className="stat-unit">spare</span>
-              </>
-            )}
-          </div>
-          <p className="stat-description">
-            {deadlineOverrunMinutes > 0
-              ? `Timeline extends ${formatHoursAndMinutes(deadlineOverrunMinutes)} beyond target window`
-              : 'Free margin between final complete session and your deadline'}
           </p>
         </div>
       </div>
