@@ -6,13 +6,10 @@ import {
   CheckCheck,
   Percent,
   Clock,
-  Activity,
-  AlertTriangle,
 } from 'lucide-react';
 import {
   formatDuration,
   formatClockTime,
-  formatSlipMinutes,
   formatHoursAndMinutes,
 } from '../utils/pomodoroCalc';
 
@@ -28,16 +25,11 @@ export function StatsGrid({
   currentTime,
   is24Hour,
   deadlineDate,
-  studySlipMinutes = 0,
-  finalSlipMinutes = 0,
-  actualDelayMinutes = 0,
 }) {
   const isFinishedToday =
     completionDate && deadlineDate && currentTime
       ? completionDate.getDate() === currentTime.getDate()
       : true;
-
-  const slipInfo = formatSlipMinutes(studySlipMinutes);
 
   return (
     <div className="stats-section">
@@ -68,44 +60,30 @@ export function StatsGrid({
           </p>
         </div>
 
-        {/* Metric 2: New Study Slip Metric */}
-        <div className={`stat-card glass-card ${studySlipMinutes > 0 ? 'stat-card-slip-warn' : ''}`}>
+        {/* Metric 2: Study Ends */}
+        <div className="stat-card glass-card">
           <div className="stat-header">
-            <span className="stat-label">Study Slip</span>
-            <div
-              className={`stat-icon-badge ${
-                studySlipMinutes > 0
-                  ? 'icon-badge-break'
-                  : studySlipMinutes < 0
-                  ? 'icon-badge-buffer'
-                  : 'icon-badge-focus'
-              }`}
-            >
-              <Activity className="w-5 h-5" />
+            <span className="stat-label">Study Ends</span>
+            <div className="stat-icon-badge icon-badge-complete">
+              <CheckCheck className="w-5 h-5 text-indigo-400" />
             </div>
           </div>
           <div className="stat-main">
-            <span className="stat-value font-mono">{slipInfo.diff}</span>
-            <span
-              className={`badge text-[11px] ${
-                slipInfo.status === 'behind'
-                  ? 'badge-break'
-                  : slipInfo.status === 'ahead'
-                  ? 'badge-buffer'
-                  : 'badge-focus'
-              }`}
-            >
-              {slipInfo.text}
+            <span className="stat-value font-mono">
+              {pomodorosPossible > 0
+                ? formatClockTime(completionDate, is24Hour, false)
+                : '--:--'}
             </span>
+            {pomodorosPossible > 0 && (
+              <span className="stat-day-tag">
+                {isFinishedToday ? 'Today' : 'Tomorrow'}
+              </span>
+            )}
           </div>
           <p className="stat-description">
-            {actualDelayMinutes > 0
-              ? `Current session started ${formatDuration(actualDelayMinutes)} late vs schedule`
-              : studySlipMinutes > 0
-              ? `Overall schedule shifted by +${formatDuration(studySlipMinutes)} (finish: +${formatDuration(finalSlipMinutes)})`
-              : studySlipMinutes < 0
-              ? `Ahead of original baseline plan by ${formatDuration(Math.abs(studySlipMinutes))}`
-              : 'Perfect timing — exactly aligned with original baseline plan'}
+            {pomodorosPossible > 0
+              ? `At ${formatClockTime(completionDate, is24Hour, false)} study ends`
+              : 'No sessions scheduled yet'}
           </p>
         </div>
 
@@ -145,42 +123,7 @@ export function StatsGrid({
           </p>
         </div>
 
-        {/* Metric 5: Expected Completion Time */}
-        <div className="stat-card glass-card">
-          <div className="stat-header">
-            <span className="stat-label">Expected Completion</span>
-            <div className="stat-icon-badge icon-badge-complete">
-              <CheckCheck className="w-5 h-5" />
-            </div>
-          </div>
-          <div className="stat-main">
-            <span className="stat-value-sub font-mono">
-              {pomodorosPossible > 0
-                ? formatClockTime(completionDate, is24Hour, false)
-                : '--:--'}
-            </span>
-            {pomodorosPossible > 0 && (
-              <span className="stat-day-tag">
-                {isFinishedToday ? 'Today' : 'Tomorrow'}
-              </span>
-            )}
-          </div>
-          <p className="stat-description">
-            {deadlineOverrunMinutes > 0 ? (
-              <span className="text-amber-400 font-medium">
-                Overruns target deadline by {formatHoursAndMinutes(deadlineOverrunMinutes)}
-              </span>
-            ) : pomodorosPossible > 0 ? (
-              `When you will finish your ${pomodorosPossible}${
-                pomodorosPossible === 1 ? 'st' : pomodorosPossible === 2 ? 'nd' : pomodorosPossible === 3 ? 'rd' : 'th'
-              } session`
-            ) : (
-              'No sessions scheduled yet'
-            )}
-          </p>
-        </div>
-
-        {/* Metric 6: Study Efficiency */}
+        {/* Metric 5: Study Efficiency */}
         <div className="stat-card glass-card">
           <div className="stat-header">
             <span className="stat-label">Study Efficiency</span>
@@ -197,31 +140,27 @@ export function StatsGrid({
           </p>
         </div>
 
-        {/* Metric 7: Buffer Time / Deadline Overrun */}
+        {/* Metric 6: Buffer Time */}
         <div className="stat-card glass-card">
           <div className="stat-header">
             <span className="stat-label">
-              {deadlineOverrunMinutes > 0 ? 'Deadline Overrun' : 'Buffer Time'}
+              {deadlineOverrunMinutes > 0 ? 'Margin' : 'Buffer Time'}
             </span>
             <div
               className={`stat-icon-badge ${
                 deadlineOverrunMinutes > 0 ? 'icon-badge-break' : 'icon-badge-buffer'
               }`}
             >
-              {deadlineOverrunMinutes > 0 ? (
-                <AlertTriangle className="w-5 h-5 text-amber-400" />
-              ) : (
-                <Clock className="w-5 h-5" />
-              )}
+              <Clock className="w-5 h-5" />
             </div>
           </div>
           <div className="stat-main">
             {deadlineOverrunMinutes > 0 ? (
               <div className="stat-overrun-split">
-                <span className="stat-value font-mono text-amber-400">
+                <span className="stat-value font-mono text-slate-200">
                   +{formatHoursAndMinutes(deadlineOverrunMinutes)}
                 </span>
-                <span className="stat-unit text-amber-400/80">overrun</span>
+                <span className="stat-unit text-slate-400">margin</span>
               </div>
             ) : (
               <>
@@ -232,7 +171,7 @@ export function StatsGrid({
           </div>
           <p className="stat-description">
             {deadlineOverrunMinutes > 0
-              ? `Schedule extends ${formatHoursAndMinutes(deadlineOverrunMinutes)} past your target deadline`
+              ? `Timeline extends ${formatHoursAndMinutes(deadlineOverrunMinutes)} beyond target window`
               : 'Free margin between final complete session and your deadline'}
           </p>
         </div>

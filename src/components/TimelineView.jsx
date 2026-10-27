@@ -11,7 +11,6 @@ import {
   X,
   RotateCcw,
   SkipForward,
-  AlertCircle,
   Pencil,
   Eye,
   EyeOff,
@@ -367,17 +366,6 @@ export function TimelineView({
           </button>
         </div>
       </div>
-
-      {/* Deadline Overrun Notice if schedule extends past target */}
-      {deadlineOverrunMinutes > 0 && (
-        <div className="overrun-alert-banner animate-fade-in">
-          <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
-          <div className="overrun-text">
-            <strong>Schedule Overrun:</strong> Timeline extends {formatHours(deadlineOverrunMinutes)} past your target deadline (finishing at{' '}
-            <span className="font-mono font-bold">{formatClockTime(schedule[schedule.length - 1].endTime, is24Hour, false)}</span>).
-          </div>
-        </div>
-      )}
 
       {/* Schedule Items List */}
       {isExpanded && (

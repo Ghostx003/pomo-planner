@@ -527,7 +527,7 @@ export default function App() {
               onSyncDeadlineToSchedule={handleSyncDeadlineToSchedule}
             />
 
-            {/* Live Study Calculations Statistics Grid with Study Slip */}
+            {/* Live Study Calculations Statistics Grid */}
             <StatsGrid
               pomodorosPossible={scheduleStats.totalPomodoros}
               completedPomodoros={scheduleStats.completedPomodoros}
@@ -540,9 +540,6 @@ export default function App() {
               currentTime={currentTime}
               is24Hour={is24Hour}
               deadlineDate={deadlineDate}
-              studySlipMinutes={scheduleStats.studySlipMinutes}
-              finalSlipMinutes={scheduleStats.finalSlipMinutes}
-              actualDelayMinutes={scheduleStats.actualDelayMinutes}
             />
 
             {/* Time Allocation & Motivational Insight */}
