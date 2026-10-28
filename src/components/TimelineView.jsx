@@ -19,7 +19,6 @@ import {
   formatClockTime,
   dateToTimeInputValue,
   parseTimeToDate,
-  formatHours,
   formatDuration,
 } from '../utils/pomodoroCalc';
 
@@ -129,6 +128,8 @@ export function TimelineView({
   onResetSchedule,
 }) {
   const [isExpanded, setIsExpanded] = useState(true);
+  // State to toggle visibility of completed/finished sessions (default hidden)
+  const [showFinished, setShowFinished] = useState(false);
 
   if (!schedule || schedule.length === 0) {
     return (
@@ -147,9 +148,6 @@ export function TimelineView({
     (t) => t.type === 'focus' && t.status === 'completed'
   ).length;
   const hasAdjustments = schedule.some((t) => t.isManuallyAdjusted);
-
-  // State to toggle visibility of completed/finished sessions (default hidden)
-  const [showFinished, setShowFinished] = useState(false);
 
   // Find the currently active session (first uncompleted session)
   const activeSessionIndex = schedule.findIndex((t) => t.status === 'pending');

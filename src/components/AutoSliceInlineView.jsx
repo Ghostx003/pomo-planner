@@ -14,6 +14,7 @@ import {
 import {
   calculateInitialAutoSlice,
   adjustAutoSliceOnSlider,
+  getTierLimits,
   buildSessionsSequence,
   buildPhasesFromSequence,
 } from '../utils/autoSliceCalc';
@@ -24,8 +25,11 @@ export function AutoSliceInlineView({
   onApplyAutoSlice,
   currentTime,
 }) {
-  // Target Study Hours (default 9 as requested)
-  const [targetHours, setTargetHours] = useState(9);
+  // Target Study Hours (default 6 as requested, or user saved)
+  const [targetHours, setTargetHours] = useState(() => {
+    const saved = localStorage.getItem('pomoplan_auto_slice_hours');
+    return saved ? Math.max(0.5, Math.min(24, parseFloat(saved) || 6)) : 6;
+  });
 
   // Breaks depend on session duration:
   // 25m session -> 5m break
@@ -49,13 +53,21 @@ export function AutoSliceInlineView({
   // Align finish deadline checkbox (default true)
   const [alignDeadline, setAlignDeadline] = useState(true);
 
-  // Counts for each duration tier: 25, 35, 45
-  const [counts, setCounts] = useState(() => calculateInitialAutoSlice(9));
+  // Tight partition limits and valid counts based on target study duration
+  const tierLimits = useMemo(() => {
+    return getTierLimits(targetHours);
+  }, [targetHours]);
+
+  // Counts for each duration tier: 25, 35, 45 (calculated with exact integer partition math)
+  const [counts, setCounts] = useState(() => calculateInitialAutoSlice(targetHours));
 
   // When target hours changes via input/presets, re-calculate initial distribution
   const handleHoursChange = (newHours) => {
     const val = Math.max(0.5, Math.min(24, parseFloat(newHours) || 1));
     setTargetHours(val);
+    try {
+      localStorage.setItem('pomoplan_auto_slice_hours', String(val));
+    } catch {}
     const newCounts = calculateInitialAutoSlice(val);
     setCounts(newCounts);
     triggerHaptic('light');
@@ -67,7 +79,7 @@ export function AutoSliceInlineView({
     setCounts(calculateInitialAutoSlice(targetHours));
   };
 
-  // Slider change handler with live auto-balancing
+  // Slider change handler with live mathematical auto-balancing
   const handleSliderChange = (tier, newCount) => {
     const count = Math.max(0, parseInt(newCount, 10) || 0);
     triggerHaptic('light');
@@ -81,18 +93,37 @@ export function AutoSliceInlineView({
       });
       setCounts(adjusted);
     } else {
+      const maxLimit = tierLimits.max[tier] || 60;
       setCounts((prev) => ({
         ...prev,
-        [tier]: count,
+        [tier]: Math.min(maxLimit, count),
       }));
     }
   };
 
-  // Stepper increment / decrement for sessions count
+  // Stepper increment / decrement for sessions count using valid partition counts
   const handleStepCount = (tier, delta) => {
-    const current = counts[tier] || 0;
-    const next = Math.max(0, current + delta);
-    handleSliderChange(tier, next);
+    triggerHaptic('light');
+
+    if (autoBalance) {
+      const current = counts[tier] || 0;
+      const adjusted = adjustAutoSliceOnSlider({
+        targetHours,
+        activeTier: tier,
+        newCount: current + delta,
+        currentCounts: counts,
+        stepDelta: delta,
+      });
+      setCounts(adjusted);
+    } else {
+      const current = counts[tier] || 0;
+      const maxLimit = tierLimits.max[tier] || 60;
+      const next = Math.max(0, Math.min(maxLimit, current + delta));
+      setCounts((prev) => ({
+        ...prev,
+        [tier]: next,
+      }));
+    }
   };
 
   // Handler for individual tier break changes
@@ -121,14 +152,16 @@ export function AutoSliceInlineView({
 
   const totalSessionsCount = (counts[25] || 0) + (counts[35] || 0) + (counts[45] || 0);
 
-  // Total Break Minutes correctly computed per tier break
+  // Total Break Minutes: breaks only occur between sessions (matching calculateStudyPlan timeline)
   const totalBreakMinutes = useMemo(() => {
-    return (
-      (counts[25] || 0) * (tierBreaks[25] || 0) +
-      (counts[35] || 0) * (tierBreaks[35] || 0) +
-      (counts[45] || 0) * (tierBreaks[45] || 0)
-    );
-  }, [counts, tierBreaks]);
+    if (sessionSequence.length <= 1) return 0;
+    let sum = 0;
+    for (let i = 0; i < sessionSequence.length - 1; i++) {
+      const dur = sessionSequence[i];
+      sum += tierBreaks[dur] ?? 5;
+    }
+    return sum;
+  }, [sessionSequence, tierBreaks]);
 
   const totalPlanMinutes = totalFocusMinutes + totalBreakMinutes;
 
@@ -165,15 +198,17 @@ export function AutoSliceInlineView({
 
   const presetHours = [3, 4, 6, 8, 9, 10, 12];
 
-  // Tier info array for rendering sliders & tier-specific breaks
-  const tiers = [
+  // Tier info array for rendering sliders & tier-specific breaks with mathematically bounded ranges
+  const tiers = useMemo(() => [
     {
       duration: 25,
       label: '25 min',
       sublabel: 'Sprint Focus',
       colorClass: 'tier-25',
       badgeColor: 'badge-emerald',
-      maxSlider: 30,
+      maxSlider: tierLimits.max[25] || 15,
+      minSlider: tierLimits.min[25] || 0,
+      validCounts: tierLimits.validCounts[25] || [],
       breakPresets: [0, 3, 5, 7, 10],
       defaultBreak: 5,
     },
@@ -183,7 +218,9 @@ export function AutoSliceInlineView({
       sublabel: 'Standard Focus',
       colorClass: 'tier-35',
       badgeColor: 'badge-sky',
-      maxSlider: 25,
+      maxSlider: tierLimits.max[35] || 15,
+      minSlider: tierLimits.min[35] || 0,
+      validCounts: tierLimits.validCounts[35] || [],
       breakPresets: [0, 5, 7, 10, 12],
       defaultBreak: 7,
     },
@@ -193,11 +230,13 @@ export function AutoSliceInlineView({
       sublabel: 'Deep Work',
       colorClass: 'tier-45',
       badgeColor: 'badge-indigo',
-      maxSlider: 20,
+      maxSlider: tierLimits.max[45] || 15,
+      minSlider: tierLimits.min[45] || 0,
+      validCounts: tierLimits.validCounts[45] || [],
       breakPresets: [0, 7, 10, 15, 20],
       defaultBreak: 10,
     },
-  ];
+  ], [tierLimits]);
 
   return (
     <div className="auto-slice-inline-container animate-fade-in">
@@ -282,7 +321,7 @@ export function AutoSliceInlineView({
                 2. Pomodoro Tiers &amp; Breaks ({targetHours}h split)
               </h4>
               <p className="auto-slice-card-subtitle">
-                Slide any section to increase its Pomodoros. The other sections immediately balance to reach &ge; {targetHours} hours!
+                Slide any tier or click + / - to adjust sessions. The other tiers dynamically balance to match your exact {targetHours}h study goal!
               </p>
             </div>
           </div>
@@ -346,7 +385,7 @@ export function AutoSliceInlineView({
                       type="button"
                       className="tier-btn-sm"
                       onClick={() => handleStepCount(t.duration, -1)}
-                      disabled={count <= 0}
+                      disabled={autoBalance ? count <= (t.minSlider ?? 0) : count <= 0}
                       title={`Decrease 1 session of ${t.label}`}
                     >
                       <Minus className="w-3.5 h-3.5" />
@@ -361,7 +400,7 @@ export function AutoSliceInlineView({
                       type="button"
                       className="tier-btn-sm"
                       onClick={() => handleStepCount(t.duration, 1)}
-                      disabled={count >= t.maxSlider}
+                      disabled={autoBalance ? count >= (t.maxSlider ?? 60) : count >= (t.maxSlider ?? 60)}
                       title={`Increase 1 session of ${t.label}`}
                     >
                       <Plus className="w-3.5 h-3.5" />
@@ -523,9 +562,17 @@ export function AutoSliceInlineView({
       <div className="auto-slice-card glass-card">
         <div className="summary-card-title-row">
           <span className="summary-heading">4. Total Plan Summary</span>
-          {excessMinutes > 0 && (
+          {excessMinutes === 0 && totalFocusMinutes > 0 ? (
+            <span className="summary-exact-pill">
+              ✓ Exact {targetHours}h matched (0m variance)
+            </span>
+          ) : excessMinutes > 0 ? (
             <span className="summary-bonus-pill">
               +{formatDuration(excessMinutes)} over target
+            </span>
+          ) : (
+            <span className="summary-under-pill">
+              -{formatDuration(Math.abs(excessMinutes))} under target
             </span>
           )}
         </div>
